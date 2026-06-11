@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Polaris lint gate: yamllint + editorconfig-checker + gitleaks.
+#
+# Single source for the lint checks so the LOCAL gate (tools/ci, the pre-push
+# hook, release-check) runs exactly what the GitHub `lint` job runs. Each tool
+# runs only if installed, so a clean clone without them is not blocked; CI
+# installs all three, so the required gate is real there. A lint FAILURE
+# propagates (set -e) -- it is never masked.
+set -euo pipefail
+export LC_ALL=C
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$REPO_ROOT"
+
+if command -v yamllint >/dev/null 2>&1; then
+  echo "lint: yamllint"; yamllint .github/ .yamllint
+else
+  echo "lint: yamllint not installed; skipping"
+fi
+
+if command -v editorconfig-checker >/dev/null 2>&1; then
+  echo "lint: editorconfig-checker"; editorconfig-checker
+else
+  echo "lint: editorconfig-checker not installed; skipping"
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  echo "lint: gitleaks"; gitleaks detect --source . --no-banner --redact
+else
+  echo "lint: gitleaks not installed; skipping"
+fi
+
+echo "lint: passed."

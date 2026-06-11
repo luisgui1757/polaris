@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Polaris status -- where the rules are installed and whether they are current.
+#
+# For each entrypoint (repo-local and per-user/global): is it present, does it
+# carry the managed block, and does that block match the CURRENTLY rendered
+# bundle (current / STALE / no-block / absent)? Plus which CLI binaries are on
+# PATH. Read-only. Usage: tools/status [--target DIR]
+set -euo pipefail
+export LC_ALL=C
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+# shellcheck source=polaris-lib.sh
+source "$SCRIPT_DIR/polaris-lib.sh"
+MANIFEST="$REPO_ROOT/MANIFEST.json"
+CORE="$REPO_ROOT/core"
+
+TARGET_DIR="$REPO_ROOT"
+case "${1:-}" in
+  --target) TARGET_DIR=$(cd "${2:?--target needs a directory}" 2>/dev/null && pwd) || { echo "status: --target directory not found: ${2:-}" >&2; exit 2; } ;;
+  --target=*) TARGET_DIR=$(cd "${1#--target=}" 2>/dev/null && pwd) || { echo "status: --target directory not found: ${1#--target=}" >&2; exit 2; } ;;
+esac
+
+ver=$(tr -d ' \r\n' < "$REPO_ROOT/VERSION" 2>/dev/null || echo dev)
+sha=$(polaris_bundle_sha256 "$CORE" "$MANIFEST")
+
+state_of() {
+  local path=$1 got
+  if [[ ! -e "$path" ]]; then printf 'absent'; return; fi
+  if ! grep -q '^<!-- AGENT-RULES:BEGIN' "$path" 2>/dev/null; then printf 'no-block'; return; fi
+  # Read the sha only from the generated header line, not anywhere a user might
+  # have written a 'sha256:' string of their own.
+  got=$(grep -m1 '^<!-- version:' "$path" 2>/dev/null \
+        | sed -n 's/.*sha256: \([0-9a-f][0-9a-f]*\).*/\1/p')
+  [[ "$got" == "$sha" ]] && printf 'current' || printf 'STALE'
+}
+row() { printf '  %-9s %s\n' "$(state_of "$1")" "${1/#$HOME/~}"; }
+
+echo "polaris status -- v$ver, current bundle ${sha:0:12}"
+echo
+echo "repo ($TARGET_DIR):"
+row "$TARGET_DIR/AGENTS.md"
+row "$TARGET_DIR/CLAUDE.md"
+row "$TARGET_DIR/.github/copilot-instructions.md"
+echo
+echo "global (per-user):"
+row "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
+row "$HOME/.claude/CLAUDE.md"
+row "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/AGENTS.md"
+row "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/AGENTS.md"
+echo
+printf 'CLI binaries on PATH:'
+for b in claude codex opencode pi; do
+  if command -v "$b" >/dev/null 2>&1; then printf ' %s=yes' "$b"; else printf ' %s=no' "$b"; fi
+done
+echo
+echo "(Copilot has no global file -- set it in VS Code / github.com; see docs/tool-ingestion.md)"

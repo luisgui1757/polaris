@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/luisgui1757/polaris/schemas/manifest.schema.json",
+  "title": "Polaris MANIFEST.json",
+  "description": "Machine-readable contract: core read order, term policy, and the injected-bundle byte budget. Validated lightly by tools/check; this schema is the canonical reference.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "core_dir",
+    "required_core_read_order",
+    "forbidden_core_terms"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Manifest format version."
+    },
+    "name": {
+      "type": "string",
+      "const": "polaris",
+      "description": "The core must identify itself as 'polaris'."
+    },
+    "description": { "type": "string" },
+    "core_dir": {
+      "type": "string",
+      "description": "Directory holding the core rule files, relative to the manifest."
+    },
+    "required_core_read_order": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Ordered core files that make up the always-injected bundle."
+    },
+    "optional_core_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Core files that exist but are not injected (e.g. BOOTSTRAP, REVIEW_PROTOCOL)."
+    },
+    "forbidden_core_terms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "GENERIC, publishable patterns banned anywhere in the tree (e.g. absolute home paths). Private terms must NOT be listed here -- they live in the gitignored local_denylist."
+    },
+    "local_denylist": {
+      "type": "string",
+      "description": "Path (relative to the manifest) of the gitignored private denylist. Defaults to tools/forbidden-terms.local."
+    },
+    "render_budget_bytes": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Max bytes for the rendered bundle; tools/check fails over it, warns at >=75%."
+    }
+  }
+}

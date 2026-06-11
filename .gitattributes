@@ -1,0 +1,12 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF on every shell/text file regardless of platform / core.autocrlf, so a
+# Windows checkout never CRLF-corrupts shell scripts (which would break WSL /
+# Git-Bash with `bad interpreter: /usr/bin/env bash^M`). Matches .editorconfig
+# (end_of_line = lf).
+*.sh    text eol=lf
+*.bash  text eol=lf
+*.zsh   text eol=lf
+*.toml  text eol=lf
+*.conf  text eol=lf

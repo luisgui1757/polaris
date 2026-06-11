@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Pre-release gate: VERSION, the CHANGELOG, the generated adapters, and the full
+# ci gate must all agree before a release is tagged. Run: make release-check.
+set -euo pipefail
+export LC_ALL=C
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$REPO_ROOT"
+
+ver=$(tr -d ' \r\n' < VERSION 2>/dev/null || true)
+[[ -n "$ver" ]] || { echo "release-check: empty or missing VERSION" >&2; exit 1; }
+
+if [[ ! -f CHANGELOG.md ]]; then
+  echo "release-check: CHANGELOG.md missing" >&2; exit 1
+fi
+# Escape regex metacharacters in the version (the dots are literal, not wildcards).
+ver_re=$(printf '%s' "$ver" | sed 's/[][\.*^$/]/\\&/g')
+if ! grep -qE "^## .*\[?${ver_re}\]?" CHANGELOG.md; then
+  echo "release-check: CHANGELOG.md has no section for version ${ver}" >&2; exit 1
+fi
+echo "release-check: VERSION=${ver} has a CHANGELOG entry."
+
+# Adapters in sync + full gate (leak scan + render + drift).
+bash tools/install --check
+bash tools/ci
+
+echo "release-check: OK -- safe to tag v${ver}."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Polaris generic render CLI.
+#
+# Prints the Polaris core read-order files (MANIFEST.json then the required
+# core files) so a tool or human can paste the contract. Consuming
+# repositories render this generic core first, then append their overlay.
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+
+# shellcheck source=polaris-lib.sh
+source "$SCRIPT_DIR/polaris-lib.sh"
+
+printf '# Polaris Core\n'
+polaris_render_core "$REPO_ROOT/core" "$REPO_ROOT/MANIFEST.json"

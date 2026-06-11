@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Verify a vendored Polaris copy: structure, leak-clean core, and the integrity
+# hash of the rendered bundle. A consumer that pinned an upstream release can run
+# this to confirm its vendored tree is a complete, unmodified Polaris of a known
+# bundle -- not a partial or tampered copy.
+#
+# Usage:
+#   tools/verify-vendor <vendor-dir> [expected-bundle-sha256]
+#
+# Exit 0 if structurally valid (and, when given, the bundle hash matches).
+set -euo pipefail
+export LC_ALL=C
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=polaris-lib.sh
+source "$SCRIPT_DIR/polaris-lib.sh"
+
+dir=${1:?usage: tools/verify-vendor <vendor-dir> [expected-bundle-sha256]}
+dir=$(cd "$dir" && pwd)
+manifest="$dir/MANIFEST.json"
+core="$dir/core"
+
+[[ -f "$manifest" ]] || { echo "verify-vendor: missing $manifest" >&2; exit 1; }
+[[ -d "$core" ]]     || { echo "verify-vendor: missing $core" >&2; exit 1; }
+
+# Structure + required files + generic-term cleanliness (the vendor's own private
+# denylist is not required here; only the generic, publishable guarantee).
+if ! polaris_check_core "$core" "$manifest"; then
+  echo "verify-vendor: core structure/leak check FAILED" >&2
+  exit 1
+fi
+
+sha=$(polaris_bundle_sha256 "$core" "$manifest")
+ver=$(tr -d ' \r\n' < "$dir/VERSION" 2>/dev/null || echo "?")
+echo "verify-vendor: $dir  version=$ver  bundle-sha256=$sha"
+
+if [[ -n "${2:-}" ]]; then
+  if [[ "$2" == "$sha" ]]; then
+    echo "verify-vendor: bundle MATCHES the expected hash."
+  else
+    echo "verify-vendor: bundle MISMATCH (expected $2)" >&2
+    exit 1
+  fi
+fi

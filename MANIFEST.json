@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "name": "polaris",
+  "description": "Reusable operating contract for AI coding assistants.",
+  "core_dir": "core",
+  "required_core_read_order": [
+    "core/MODES.md",
+    "core/INVARIANTS.md",
+    "core/EXECUTION.md",
+    "core/WORKFLOW.md",
+    "core/TESTING.md",
+    "core/MEMORY.md"
+  ],
+  "optional_core_files": [
+    "core/BOOTSTRAP.md",
+    "core/REVIEW_PROTOCOL.md",
+    "core/ADAPTERS.md"
+  ],
+  "forbidden_core_terms": [
+    "/Users/",
+    "/home/",
+    "C:\\Users\\"
+  ],
+  "local_denylist": "tools/forbidden-terms.local",
+  "render_budget_bytes": 32768
+}
