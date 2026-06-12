@@ -27,6 +27,15 @@ Durable, plaintext roadmap — diffable, grep-able, GitHub-native. Delete at mat
   `always` mode, so the owner can push straight to `main` (no PR) and override
   `ci`/review; everyone else needs a PR + code-owner review + green `ci`. Kept in
   public **by design** — it avoids leaking work-in-progress into public PR diffs.
+- **Public-launch audit "history leak" (P1) — FALSE ALARM, do not re-open.** A
+  2026-06-12 adversarial audit flagged a private denylist in commit `36fa204`,
+  but that commit is **not** in this public repo: `origin/main` is a clean
+  3-commit orphan-root history and the old leaky commit lives only in the
+  **private** `__polaris__` repo (plus a local tag, since deleted). Verified:
+  `git merge-base --is-ancestor 36fa204 origin/main` → false; HEAD
+  `MANIFEST.json` carries only generic home-path patterns. The audit ran
+  `git log --all` over the local clone and swept in orphaned pre-cleanup history.
+  Every other audit finding was P3 and has been resolved (see `CHANGELOG.md`).
 
 ## Shipped
 
