@@ -41,7 +41,25 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
   `ci`). Source files, `settings.yml`, and the safeguards verifier updated to
   match. Kept in public by design — avoids leaking WIP into public PR diffs.
 
+### Security
+- CI supply-chain hardening (public-launch audit): the `lint` job now downloads
+  editorconfig-checker and gitleaks, verifies each against a pinned asset
+  `sha256` (`sha256sum -c`), and only then extracts — a yanked/retagged/tampered
+  upstream release fails loudly instead of executing. `actions/checkout` is
+  pinned to a commit SHA (`@08eba0b… # v4.3.0`). `allow_auto_merge: false` added
+  to `settings.yml` so the declarative config matches the safeguards script.
+
 ### Fixed
+- `tools/verify-vendor`: reading an absent `VERSION` leaked a shell
+  "No such file" to stderr while still exiting 0 on a structurally incomplete
+  vendor; it now reads `VERSION` only when present (it is optional metadata, not
+  part of the bundle hash).
+- Docs accuracy (public-launch audit): `tool-ingestion.md` points Copilot users
+  at the brand-neutral `AGENT-RULES` marker block, not the `make render` debug
+  dump (which prints the manifest/layout), and dates the "verified versions"
+  snapshot; `THREAT_MODEL.md` states gitleaks is already integrated (not
+  roadmap); `consumers.md` shows the exact `verify-vendor` invocation; `README`
+  clarifies that the private-term denylist is owner-local.
 - Empty-bundle guard: a malformed/unreadable manifest fails loudly instead of
   rendering nothing and hashing to the empty-string sha (jq/no-jq agreement).
 - Manifest projection uses `jq 'del(.forbidden_core_terms)'` when jq is present;

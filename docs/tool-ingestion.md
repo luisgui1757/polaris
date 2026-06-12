@@ -63,7 +63,11 @@ about the rule text, not the marker.) Compare the installed state with
 Copilot has no global dotfile. To carry the rules into every workspace:
 
 - **VS Code:** Command Palette → *Chat: New Instructions File* → *New (User)*;
-  paste the rendered contract (`make render`) and set frontmatter `applyTo: '**'`.
+  paste the brand-neutral contract — the text between the
+  `<!-- AGENT-RULES:BEGIN -->` and `<!-- AGENT-RULES:END -->` markers of a
+  generated adapter (this repo's `AGENTS.md`, or any target you ran
+  `tools/install` on) — and set frontmatter `applyTo: '**'`. (Do not paste
+  `make render` output: that debug dump includes the manifest and file layout.)
   This lives in your VS Code user profile and applies across workspaces.
 - **github.com:** Copilot → profile → *Personal instructions* (affects
   github.com Copilot Chat only — not VS Code or the coding agent).
@@ -73,6 +77,8 @@ profile- and edition-specific), so this stays a documented manual step.
 
 ## Verified (local) versions
 
-Confirmed on the author's machine: Claude Code 2.1.x, Codex CLI 0.137.x, pi
-0.78.x. opencode was not installed locally, so its `AGENTS.md` / `~/.config/opencode`
-behavior is from its docs — re-confirm with `make status` once it's installed.
+Point-in-time snapshot, verified on the author's machine as of 2026-06-12:
+Claude Code 2.1.x, Codex CLI 0.137.x, pi 0.78.x. Treat this as a dated
+confirmation, not a guarantee — CLIs move. opencode was not installed locally, so
+its `AGENTS.md` / `~/.config/opencode` behavior is from its docs — re-confirm with
+`make status` once it's installed.

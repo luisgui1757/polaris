@@ -22,6 +22,9 @@ writes the rules into that file. That's the whole trick.
 
 ## Use it
 
+> Run these from your Polaris checkout — the commands use the repo-relative
+> `tools/install` (or `make install`).
+
 ### 1. Add the rules to a repo (and share with your team)
 
 ```bash
@@ -76,6 +79,12 @@ The public files only ever contain generic patterns; your private project names
 live in `tools/forbidden-terms.local` (gitignored, never committed). `make check`
 scans the whole repo and **fails** if a private term or home path slips in — and
 it reports the location without ever printing the term.
+
+The private-term denylist is **yours**: `tools/forbidden-terms.local` is
+gitignored and never committed, so a fresh clone's `make check` enforces only the
+generic home-path patterns shipped in `MANIFEST.json`. To also scan for your own
+private terms, create that file (one term per line) — `MANIFEST.json`'s
+`local_denylist` key already wires it in.
 
 ---
 

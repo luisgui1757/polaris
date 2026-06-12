@@ -11,5 +11,17 @@ table notes which path each consumer uses.
 | `polaris` (this repo) | install (dogfood) | Generates its own `AGENTS.md` / `CLAUDE.md` / `.github/copilot-instructions.md` via `tools/install`; the `ci` drift check keeps them current. |
 | _(your repo)_ | vendor | Copy `core/` + `MANIFEST.json` into `.agent-rules/`, pin a commit SHA, and verify the vendored tree with `tools/verify-vendor`. |
 
+**Verifying a vendored tree.** `verify-vendor` is *not* part of the vendored
+payload — you copy only `core/` + `MANIFEST.json`. Run it from an upstream Polaris
+checkout pinned to the same commit SHA:
+
+```bash
+path/to/polaris/tools/verify-vendor .agent-rules <expected-bundle-sha256>
+```
+
+It recomputes the bundle hash of your vendored `core/` + `MANIFEST.json` and fails
+if the tree is incomplete or does not match the pinned bundle. (`VERSION` is
+optional metadata and is not part of the hash.)
+
 Consumers are listed without exposing private project details. Add a row when a
 new repository adopts Polaris.

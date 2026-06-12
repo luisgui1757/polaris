@@ -64,8 +64,9 @@ model for an author exfiltrating their own secrets. Failure modes:
 - **Unknown secrets.** The scan matches *known* strings (generic patterns + your
   denylist). A brand-new private term you have not added will pass. The denylist
   is a memory, not a classifier — keep it current. For secret *shapes* (tokens,
-  keys) pair Polaris with a dedicated secret scanner (e.g. gitleaks); see the
-  roadmap.
+  keys) Polaris already integrates **gitleaks** in CI (the `lint` job gated by
+  `ci`, scanning full history); note gitleaks matches known secret shapes, not
+  your private-term denylist — the two are complementary.
 - **Encoded / transformed content.** A private term that is base64'd, hashed, or
   split across lines will not match.
 - **Matching gaps.** Pure-word terms match on word boundaries (so a short term

@@ -31,7 +31,11 @@ if ! polaris_check_core "$core" "$manifest"; then
 fi
 
 sha=$(polaris_bundle_sha256 "$core" "$manifest")
-ver=$(tr -d ' \r\n' < "$dir/VERSION" 2>/dev/null || echo "?")
+# VERSION is optional metadata (not part of the bundle hash); read it only when
+# present so a minimal vendor (core/ + MANIFEST.json) verifies without a stray
+# "No such file" on stderr.
+ver="?"
+[[ -f "$dir/VERSION" ]] && ver=$(tr -d ' \r\n' < "$dir/VERSION")
 echo "verify-vendor: $dir  version=$ver  bundle-sha256=$sha"
 
 if [[ -n "${2:-}" ]]; then

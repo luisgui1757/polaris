@@ -5,10 +5,15 @@ repository:
   allow_merge_commit: false
   allow_squash_merge: true
   allow_rebase_merge: false
+  allow_auto_merge: false
   delete_branch_on_merge: true
   enable_automated_security_fixes: true
   enable_vulnerability_alerts: true
 
+# This classic protection is the fallback layer. The .github/rulesets/ stack on
+# top of it and carry the owner-only `always` bypass (direct-push); edit the two
+# layers together so they never disagree. scripts/apply-repo-safeguards.sh
+# applies and verifies both.
 branches:
   - name: main
     protection:
