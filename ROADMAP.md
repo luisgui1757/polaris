@@ -4,12 +4,7 @@ Durable, plaintext roadmap — diffable, grep-able, GitHub-native. Delete at mat
 
 ## Now (owner actions)
 
-- **Publication.** Public repos get free Actions, so `ci` runs. Flip with
-  `gh repo edit --visibility public`, then apply the two public-only Actions
-  safety settings (fork-PR approval = all external contributors; enable private
-  vulnerability reporting). The codeowner bypass is kept **by design** — review
-  is mandatory for everyone else, but the owner can self-merge and override `ci`.
-  Optionally tag `v0.1.0` (`docs/RELEASE.md`).
+- **Tag `v0.1.0`** when ready (`docs/RELEASE.md`) — optional, not a blocker.
 - **Run `make install-global`** to carry the rules into every repo on this machine.
 
 ## Open
@@ -28,6 +23,10 @@ Durable, plaintext roadmap — diffable, grep-able, GitHub-native. Delete at mat
   word); enumerate casings explicitly in the denylist when needed.
 - **No-jq manifest fallback** — kept as documented best-effort; jq is preferred
   and CI installs it.
+- **Owner direct-push to main** — the owner is the sole ruleset bypass actor in
+  `always` mode, so the owner can push straight to `main` (no PR) and override
+  `ci`/review; everyone else needs a PR + code-owner review + green `ci`. Kept in
+  public **by design** — it avoids leaking work-in-progress into public PR diffs.
 
 ## Shipped
 
@@ -37,6 +36,8 @@ TESTING → MEMORY); two-tier privacy with redaction + path/manifest scans, plus
 **gitleaks** secret-shape scanning; `tools/status` / `verify-vendor` /
 `release-check`; bats suite + Linux/macOS CI matrix with **gitleaks, yamllint,
 and editorconfig-checker** gated by `ci` (ShellCheck advisory); branch-protection
-rulesets (with owner CI-override while private); threat-model / tool-ingestion /
-contributing / security / release docs; jq parser; enforced budget; determinism.
-Full detail in `CHANGELOG.md`.
+rulesets (owner-only `always` bypass for direct-push + CI/review override);
+threat-model / tool-ingestion / contributing / security / release docs; jq
+parser; enforced budget; determinism. **Public launch:** free Actions with `ci`
+green on Linux + macOS, fork-PR approval = all external contributors, private
+vulnerability reporting enabled. Full detail in `CHANGELOG.md`.

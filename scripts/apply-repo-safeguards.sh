@@ -12,9 +12,12 @@ Applies the repository safeguard posture:
   - delete branches on merge
   - auto-merge disabled
   - three active main-branch rulesets:
-      * Protect main: integrity (owner PR-bypass; required PR, strict CI, no delete/force)
-      * Protect main: review (owner-only pull-request bypass for review rules)
-      * Protect main: owner updates (only owner can update main through PRs)
+      * Protect main: integrity (required PR, strict CI, no delete/force)
+      * Protect main: review (mandatory code-owner review)
+      * Protect main: owner updates (only owner can update main)
+    The owner is the sole bypass actor on all three, in "always" mode: the
+    owner may push directly to main (no PR) and override CI/review; everyone
+    else is fully gated (PR + code-owner review + strict `ci`).
   - classic main branch protection fallback with the required `ci` check
   - best-effort GitHub security extras where the plan supports them
 
@@ -199,14 +202,14 @@ fi
 
 integrity_bypass="$(gh api "repos/$repo/rulesets/$integrity_id" \
     --jq '.bypass_actors[] | "\(.actor_type):\(.actor_id):\(.bypass_mode)"')"
-require_live_value "integrity bypass actor" "$integrity_bypass" "User:${OWNER_ID}:pull_request"
+require_live_value "integrity bypass actor" "$integrity_bypass" "User:${OWNER_ID}:always"
 
 review_bypass="$(gh api "repos/$repo/rulesets/$review_id" \
     --jq '.bypass_actors[] | "\(.actor_type):\(.actor_id):\(.bypass_mode)"')"
-require_live_value "review bypass actor" "$review_bypass" "User:${OWNER_ID}:pull_request"
+require_live_value "review bypass actor" "$review_bypass" "User:${OWNER_ID}:always"
 
 owner_updates_bypass="$(gh api "repos/$repo/rulesets/$owner_updates_id" \
     --jq '.bypass_actors[] | "\(.actor_type):\(.actor_id):\(.bypass_mode)"')"
-require_live_value "owner-updates bypass actor" "$owner_updates_bypass" "User:${OWNER_ID}:pull_request"
+require_live_value "owner-updates bypass actor" "$owner_updates_bypass" "User:${OWNER_ID}:always"
 
 echo "Repository safeguards applied and verified. Re-run safely any time."

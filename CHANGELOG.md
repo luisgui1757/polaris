@@ -35,6 +35,11 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 - Repo-scope `tools/install --check` now fails on a missing required adapter.
 - Sharpened and de-duplicated the core rules (fail-safe correctness, blast-radius
   caution, binding mode authority, memory write-authority, bounded retry loop).
+- Branch-protection: the owner's ruleset bypass is now `always` (was
+  `pull_request`), so the owner can push directly to `main` (no PR) and override
+  `ci`/review; non-owners stay fully gated (PR + code-owner review + strict
+  `ci`). Source files, `settings.yml`, and the safeguards verifier updated to
+  match. Kept in public by design — avoids leaking WIP into public PR diffs.
 
 ### Fixed
 - Empty-bundle guard: a malformed/unreadable manifest fails loudly instead of
@@ -48,6 +53,10 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 - P3 polish: CRLF-safe `VERSION` reads; friendly `--target` errors; escaped
   version match in `release-check`; top-level-anchored no-jq manifest reader;
   `--global` test coverage; de-duplicated/sharpened rule wording.
+- CI on public Actions: bumped pinned editorconfig-checker to v3.7.0 (the old
+  v2.7.2 release asset 404s upstream); bats end-to-end `check` tests give their
+  fixture commit an explicit git identity (`-c user.email/user.name`) so they
+  pass on runners with no derivable ident (GitHub `ubuntu-latest`).
 
 ### Removed
 - `ROADMAP.html` — the canonical roadmap is `ROADMAP.md` (Markdown: diffable,

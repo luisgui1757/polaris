@@ -16,11 +16,12 @@ branches:
         strict: true
         contexts:
           - ci
-      # enforce_admins is false BY DESIGN so the codeowner can override a
-      # failing/missing `ci` check and self-merge. Only the owner is a bypass
-      # actor in the .github/rulesets, so external PRs are fully gated (mandatory
-      # code-owner review + required `ci`). This posture is intentional and is
-      # KEPT in public -- do not remove the owner bypass.
+      # enforce_admins is false BY DESIGN. The owner is the sole bypass actor
+      # on the .github/rulesets in "always" mode, so the owner can push directly
+      # to main (no PR) and override a failing/missing `ci` check. Everyone else
+      # is fully gated: mandatory PR + code-owner review + required `ci`. This
+      # posture is intentional and is KEPT in public -- do not remove the owner
+      # bypass and do not raise enforce_admins.
       enforce_admins: false
       required_pull_request_reviews: null
       required_linear_history: true
