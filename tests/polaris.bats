@@ -138,7 +138,8 @@ scan() { bash -c "source '$ROOT/tools/polaris-lib.sh'; $1 2>&1"; }
 @test "check (end-to-end): catches an absolute home path in an UNTRACKED file" {
   repo="$TMP/gitrepo"; mkdir -p "$repo"
   cp -R "$ROOT/tools" "$ROOT/core" "$ROOT/MANIFEST.json" "$repo/"
-  ( cd "$repo" && git init -q && git add -A && git commit -qm init >/dev/null 2>&1 )
+  ( cd "$repo" && git init -q && git add -A \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
   # Build the home-path leak at runtime so this test FILE never contains the
   # literal home-path prefix (which the repo's own scan would flag).
   home="/Users"
@@ -151,7 +152,8 @@ scan() { bash -c "source '$ROOT/tools/polaris-lib.sh'; $1 2>&1"; }
 @test "check (end-to-end): a clean untracked tree passes" {
   repo="$TMP/gitclean"; mkdir -p "$repo"
   cp -R "$ROOT/tools" "$ROOT/core" "$ROOT/MANIFEST.json" "$repo/"
-  ( cd "$repo" && git init -q && git add -A && git commit -qm init >/dev/null 2>&1 )
+  ( cd "$repo" && git init -q && git add -A \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
   printf 'nothing to see here\n' > "$repo/ok.md"
   run bash "$repo/tools/check"
   [ "$status" -eq 0 ]

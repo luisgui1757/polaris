@@ -54,7 +54,7 @@ jobs:
           set -euxo pipefail
           python3 -m pip install --user yamllint==1.38.0
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          ec_ver=2.7.2
+          ec_ver=3.7.0
           curl -fsSL "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v${ec_ver}/ec-linux-amd64.tar.gz" | tar -xz
           sudo install -m 0755 bin/ec-linux-amd64 /usr/local/bin/editorconfig-checker
           gl_ver=8.30.1
