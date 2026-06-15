@@ -8,6 +8,9 @@ The single source for test rules.
   persisted-data change.
 - Mock only at system boundaries (network, filesystem, time, process); never mock
   internal functions to force a desired result.
+- Never weaken, skip, comment out, or delete a test to make a suite pass; a red
+  test is a finding, not an obstacle. Quarantine a genuinely flaky test only with
+  explicit authorization and a tracked follow-up.
 - Prefer deterministic, minimal fixtures.
 - For numerical behavior, test shape, monotonic relationships, boundary cases,
   and tolerance-appropriate values.

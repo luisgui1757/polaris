@@ -10,4 +10,5 @@ Use this bootstrap when a repository vendors Polaris.
 
 Polaris is a baseline, not the final authority. A repository overlay may
 specialize or tighten these rules for its own domain, data model, commands,
-review ledgers, or release process.
+review ledgers, or release process. Relaxing a baseline rule requires an
+explicit, documented justification for that scope — never a silent override.

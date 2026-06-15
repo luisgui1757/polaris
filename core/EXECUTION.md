@@ -44,8 +44,14 @@ How to behave while doing the work — mode-independent reasoning discipline.
   diagnosis instead of trying more variations — repeated failure means the model
   of the problem is wrong, not that the next tweak will work.
 - Stop at "verified," not at "looks done."
+- Never present incomplete or stubbed work as finished: a TODO, a not-implemented
+  path, a hardcoded canned value, or a disabled check must be surfaced, not handed
+  off as done. "Simplicity first" means the simplest COMPLETE solution, not a stub.
 
 ## Calibrate To Stakes
 
 - These cautious habits target non-trivial work. For a typo or an obvious
   one-liner, use judgment and do not over-ceremonialize.
+- Calibrate by blast radius and reversibility, not apparent size: anything
+  touching persisted shape, security, secrets, external contracts, or a migration
+  is never "trivial" and keeps the full discipline.

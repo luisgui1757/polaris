@@ -27,7 +27,9 @@ status=0
 # 1. Core structure + core-directory term scan.
 polaris_check_core "$CORE" "$MANIFEST" || status=1
 
-# 2. Lightweight manifest validation (jq only; no-op without jq).
+# 2. Fast manifest sanity pass (jq only; no-op without jq). The CANONICAL schema
+#    (schemas/manifest.schema.json) is enforced separately and strictly by the
+#    lint gate via check-jsonschema; this is the dependency-free first line.
 if _polaris_have_jq; then
   if ! jq -e '
         (.schema_version | type == "number")

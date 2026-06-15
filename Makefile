@@ -21,8 +21,8 @@ test: ## Run the bats tooling regression suite
 lint: ## yamllint + editorconfig-checker + gitleaks (skip-if-absent)
 	@bash tools/lint
 
-lint-shell: ## ShellCheck the shell tooling (advisory)
-	@shellcheck -x tools/polaris-lib.sh tools/check tools/install tools/ci tools/lint tools/render tools/status tools/install-hooks tools/verify-vendor tools/release-check scripts/apply-repo-safeguards.sh tests/run.sh
+lint-shell: ## ShellCheck the shell tooling (blocking gate)
+	@bash tools/lint-shell
 
 status: ## Report where the rules are installed and whether current
 	@bash tools/status

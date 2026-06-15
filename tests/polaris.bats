@@ -202,3 +202,20 @@ scan() { bash -c "source '$ROOT/tools/polaris-lib.sh'; $1 2>&1"; }
   [ -f "$g/.pi/agent/AGENTS.md" ]
   grep -q '^<!-- AGENT-RULES:BEGIN' "$g/.claude/CLAUDE.md"
 }
+
+@test "install.ps1 renders byte-identical to the bash installer (if pwsh present)" {
+  command -v pwsh >/dev/null 2>&1 || skip "pwsh not installed"
+  a="$TMP/psa"; b="$TMP/psb"; mkdir -p "$a" "$b"
+  bash "$ROOT/tools/install" --target "$a" >/dev/null
+  pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Target "$b" >/dev/null
+  for f in AGENTS.md CLAUDE.md .github/copilot-instructions.md; do
+    cmp -s "$a/$f" "$b/$f" || { echo "byte mismatch: $f"; return 1; }
+  done
+}
+
+@test "install.ps1 --check agrees the committed entrypoints are drift-free (if pwsh present)" {
+  command -v pwsh >/dev/null 2>&1 || skip "pwsh not installed"
+  run pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Check
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"blocks up to date"* ]]
+}

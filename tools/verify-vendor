@@ -45,4 +45,8 @@ if [[ -n "${2:-}" ]]; then
     echo "verify-vendor: bundle MISMATCH (expected $2)" >&2
     exit 1
   fi
+else
+  echo "verify-vendor: WARNING: structure verified but INTEGRITY NOT PROVEN -- no" >&2
+  echo "  expected bundle sha256 given. Pass the pinned hash as the 2nd argument to" >&2
+  echo "  confirm the vendored copy is a known, unmodified Polaris bundle." >&2
 fi

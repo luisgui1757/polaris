@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/luisgui1757/polaris/schemas/manifest.schema.json",
   "title": "Polaris MANIFEST.json",
-  "description": "Machine-readable contract: core read order, term policy, and the injected-bundle byte budget. Validated lightly by tools/check; this schema is the canonical reference.",
+  "description": "Machine-readable contract: core read order, term policy, and the injected-bundle byte budget. This schema is the canonical reference and is ENFORCED in CI: tools/check does a fast jq sanity pass, and the lint gate validates MANIFEST.json against this file with check-jsonschema (strict).",
   "type": "object",
   "additionalProperties": false,
   "required": [

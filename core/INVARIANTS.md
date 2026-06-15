@@ -11,6 +11,13 @@ Durable engineering truths. These hold regardless of task, language, or phase.
 - When you cannot produce a correct result, stop or raise — never emit a guess
   that downstream code will trust. A crash is recoverable; a silently wrong
   value is not.
+- Never silence an error by catching and discarding it (empty catch, bare
+  except, ignored rejection); handle it or let it propagate — a swallowed failure
+  is the silently-wrong value above, one layer up.
+- Satisfy a checker, never silence it: an inline suppression of a type, lint, or
+  compiler diagnostic is a behavior change needing the same source-of-truth
+  justification as any other, surfaced not buried, and legitimate only for a
+  documented false positive.
 - Handle empty, single-element, and boundary inputs, serialization boundaries,
   and numerical hazards before calling work complete.
 - Before reporting a conclusion, check at least one plausible alternative

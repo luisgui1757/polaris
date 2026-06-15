@@ -25,6 +25,8 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    env:
+      POLARIS_STRICT: "1"   # a missing tool fails the gate; never a silent skip
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
       - name: Install tools (Linux)
@@ -37,14 +39,15 @@ jobs:
         run: make ci
       - name: Tooling tests (bats)
         run: make test
-      - name: ShellCheck (advisory)
-        continue-on-error: true
+      - name: ShellCheck (blocking)
         run: make lint-shell
 
   lint:
     name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      POLARIS_STRICT: "1"   # every linter must run; a missing one fails the gate
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
         with:
@@ -52,7 +55,7 @@ jobs:
       - name: Install linters
         run: |
           set -euxo pipefail
-          python3 -m pip install --user yamllint==1.38.0
+          python3 -m pip install --user yamllint==1.38.0 check-jsonschema==0.29.4
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           # Each pinned version travels with its asset sha256: download, verify,
           # then extract. A yanked/retagged/tampered upstream asset fails loudly
@@ -69,23 +72,39 @@ jobs:
           echo "${gl_sha}  gitleaks.tar.gz" | sha256sum -c -
           tar -xzf gitleaks.tar.gz gitleaks
           sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
-      - name: Lint (yaml + editorconfig + secrets)
+      - name: Lint (yaml + editorconfig + secrets + schema)
         run: make lint
+
+  # Native Windows proof that the PowerShell installer renders byte-identically to
+  # the bash one: -Check fails if the committed entrypoints drift under the PS
+  # renderer (CRLF, encoding, or logic divergence). The Linux `test` job already
+  # cross-checks bash-vs-pwsh output (bats); this guards the real Windows runtime.
+  windows:
+    name: windows
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
+      - name: PowerShell installer drift check
+        shell: pwsh
+        run: ./tools/install.ps1 -Check
 
   # Stable required-status-check context. The branch-protection rulesets require
   # `ci`. It runs ALWAYS (so the required context is never reported as "skipped",
   # which some GitHub configs treat as passing) and FAILS unless every matrix
-  # `test` job AND the `lint` job succeeded.
+  # `test` job, the `lint` job, AND the `windows` job succeeded.
   ci:
     name: ci
-    needs: [test, lint]
+    needs: [test, lint, windows]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Require all prerequisite jobs to have succeeded
         run: |
-          if [ "${{ needs.test.result }}" != "success" ] || [ "${{ needs.lint.result }}" != "success" ]; then
-            echo "test=${{ needs.test.result }} lint=${{ needs.lint.result }} -- failing the required ci check" >&2
+          if [ "${{ needs.test.result }}" != "success" ] \
+             || [ "${{ needs.lint.result }}" != "success" ] \
+             || [ "${{ needs.windows.result }}" != "success" ]; then
+            echo "test=${{ needs.test.result }} lint=${{ needs.lint.result }} windows=${{ needs.windows.result }} -- failing the required ci check" >&2
             exit 1
           fi
           echo "all prerequisite jobs passed"

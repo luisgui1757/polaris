@@ -9,6 +9,23 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 - Auto-ingestion installer (`tools/install`): inlines the core into each tool's
   native entrypoint; `--target`, `--global`, `--check`, `--dry-run`, and
   `--remove` (uninstall, preserving surrounding content).
+- **Windows install path** (`tools/install.ps1`): a PowerShell port of the
+  installer with the same flags (`-Target`/`-Global`/`-Check`/`-Remove`/`-DryRun`).
+  It renders **byte-identical** output to the bash installer (same bundle
+  sha256, LF endings), so a repo installs/checks the same from Windows or POSIX
+  and the drift check stays green on both. Proven by a `windows-latest` CI job
+  (`-Check`) plus a Linux bats test that cross-compares bash-vs-pwsh output;
+  `.gitattributes` forces LF on every installer-touched file so a Windows
+  checkout cannot CRLF-corrupt the hashed bundle.
+- Gold-standard rule clauses (the "name the road to a fake-green" set): never
+  weaken/skip/comment-out/delete a failing test (quarantine only with
+  authorization + a tracked follow-up); never silence an error by catch-and-
+  discard; satisfy a checker, never silence it (no inline diagnostic
+  suppression without a documented false-positive justification); never ship a
+  stub as done; and "calibrate to stakes" is now bound to blast radius /
+  reversibility (persisted shape, security, secrets, external contracts, and
+  migrations are never "trivial"). Overlays may tighten freely but may relax a
+  baseline rule only with an explicit, documented justification.
 - Two-tier privacy: gitignored `tools/forbidden-terms.local`; whole-working-tree
   leak scan (incl. untracked files, path names, and the manifest) with redaction.
 - `core/EXECUTION.md` (always-on execution discipline).
@@ -40,6 +57,14 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
   `ci`/review; non-owners stay fully gated (PR + code-owner review + strict
   `ci`). Source files, `settings.yml`, and the safeguards verifier updated to
   match. Kept in public by design — avoids leaking WIP into public PR diffs.
+- Gates are now strict, never silently skipped (gold-standard "a check you did
+  not run is not evidence"): `POLARIS_STRICT=1` (set by CI and `release-check`)
+  makes a missing linter or missing `bats` a FAILURE instead of a skip; locally a
+  skip is loud and the summary names what was skipped. ShellCheck is now
+  **blocking** (was advisory), runs from one source (`tools/lint-shell`,
+  `--source-path=SCRIPTDIR`), and is part of `tools/ci`. `release-check` now runs
+  the bats suite (it could previously pass without it). The canonical manifest
+  schema is now ENFORCED in CI via `check-jsonschema` (was a doc-only reference).
 
 ### Security
 - CI supply-chain hardening (public-launch audit): the `lint` job now downloads

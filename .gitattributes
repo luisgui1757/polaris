@@ -10,3 +10,15 @@
 *.zsh   text eol=lf
 *.toml  text eol=lf
 *.conf  text eol=lf
+
+# Force LF on every file the installer reads or renders, so a Windows checkout
+# stays byte-for-byte identical to a POSIX one and tools/install.ps1 --check
+# never sees CRLF "drift". The rendered bundle is hashed: a stray CRLF would
+# change the sha256 and split Windows from POSIX.
+*.md       text eol=lf
+*.json     text eol=lf
+*.ps1      text eol=lf
+VERSION    text eol=lf
+LICENSE    text eol=lf
+.gitignore text eol=lf
+Makefile   text eol=lf

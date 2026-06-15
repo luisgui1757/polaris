@@ -23,7 +23,10 @@ writes the rules into that file. That's the whole trick.
 ## Use it
 
 > Run these from your Polaris checkout — the commands use the repo-relative
-> `tools/install` (or `make install`).
+> `tools/install` (or `make install`). **On Windows**, use the PowerShell port,
+> which behaves identically and renders byte-for-byte the same block:
+> `pwsh tools/install.ps1 -Target C:\path\to\repo` (`-Global`, `-Check`,
+> `-Remove`, `-DryRun` mirror the bash flags).
 
 ### 1. Add the rules to a repo (and share with your team)
 

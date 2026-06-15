@@ -1,11 +1,11 @@
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
-<!-- version: 0.1.0  sha256: eff45a5e7dc888f3c92642ccf677f7d5564e77c642cee1051ae1e005b6d558c2 -->
+<!-- version: 0.1.0  sha256: 4b85911c73f793da9b812ba6c83eb07933b267a155c1ca0391fc3071ac4b3a5c -->
 
 # Operating Contract
 
 Baseline engineering rules for this project, loaded automatically. Treat them as
-the default, not the final word -- the active task and this repository's own
-conventions may tighten or override them for their scope.
+the floor, not the ceiling: the active task and this repository's own conventions
+may tighten them freely, and may relax one only with an explicit, documented justification.
 
 Precedence, highest first: runtime/platform safety; the active task; this
 repository's conventions; the rules below; then personal global defaults.
@@ -69,6 +69,13 @@ Durable engineering truths. These hold regardless of task, language, or phase.
 - When you cannot produce a correct result, stop or raise — never emit a guess
   that downstream code will trust. A crash is recoverable; a silently wrong
   value is not.
+- Never silence an error by catching and discarding it (empty catch, bare
+  except, ignored rejection); handle it or let it propagate — a swallowed failure
+  is the silently-wrong value above, one layer up.
+- Satisfy a checker, never silence it: an inline suppression of a type, lint, or
+  compiler diagnostic is a behavior change needing the same source-of-truth
+  justification as any other, surfaced not buried, and legitimate only for a
+  documented false positive.
 - Handle empty, single-element, and boundary inputs, serialization boundaries,
   and numerical hazards before calling work complete.
 - Before reporting a conclusion, check at least one plausible alternative
@@ -141,11 +148,17 @@ How to behave while doing the work — mode-independent reasoning discipline.
   diagnosis instead of trying more variations — repeated failure means the model
   of the problem is wrong, not that the next tweak will work.
 - Stop at "verified," not at "looks done."
+- Never present incomplete or stubbed work as finished: a TODO, a not-implemented
+  path, a hardcoded canned value, or a disabled check must be surfaced, not handed
+  off as done. "Simplicity first" means the simplest COMPLETE solution, not a stub.
 
 ### Calibrate To Stakes
 
 - These cautious habits target non-trivial work. For a typo or an obvious
   one-liner, use judgment and do not over-ceremonialize.
+- Calibrate by blast radius and reversibility, not apparent size: anything
+  touching persisted shape, security, secrets, external contracts, or a migration
+  is never "trivial" and keeps the full discipline.
 
 ## Workflow
 
@@ -207,6 +220,9 @@ The single source for test rules.
   persisted-data change.
 - Mock only at system boundaries (network, filesystem, time, process); never mock
   internal functions to force a desired result.
+- Never weaken, skip, comment out, or delete a test to make a suite pass; a red
+  test is a finding, not an obstacle. Quarantine a genuinely flaky test only with
+  explicit authorization and a tracked follow-up.
 - Prefer deterministic, minimal fixtures.
 - For numerical behavior, test shape, monotonic relationships, boundary cases,
   and tolerance-appropriate values.

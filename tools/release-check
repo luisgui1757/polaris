@@ -21,8 +21,15 @@ if ! grep -qE "^## .*\[?${ver_re}\]?" CHANGELOG.md; then
 fi
 echo "release-check: VERSION=${ver} has a CHANGELOG entry."
 
-# Adapters in sync + full gate (leak scan + render + drift).
+# A release gate runs STRICT: every linter and the regression suite must actually
+# run -- a missing tool is a failure, never a silent skip.
+export POLARIS_STRICT=1
+
+# Adapters in sync + full gate (leak scan + render + drift + lint + shellcheck).
 bash tools/install --check
 bash tools/ci
+# The regression suite itself (tools/ci is the leak/render/drift/lint gate; the
+# bats suite is separate and a release must not skip it).
+bash tests/run.sh
 
 echo "release-check: OK -- safe to tag v${ver}."
