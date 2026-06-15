@@ -25,8 +25,6 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
-    env:
-      POLARIS_STRICT: "1"   # a missing tool fails the gate; never a silent skip
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
       - name: Install tools (Linux)
@@ -35,12 +33,15 @@ jobs:
       - name: Install tools (macOS)
         if: runner.os == 'macOS'
         run: brew install jq bats-core shellcheck
-      - name: Gate (leak scan + render smoke + adapter drift)
+      # The 4 lint validators live in the `lint` job (where they run STRICT); this
+      # job carries jq/shellcheck/bats, so `make ci`'s lint step skips the absent
+      # validators loudly (non-strict) while ShellCheck (present) stays blocking.
+      - name: Gate (leak scan + render smoke + adapter drift + shellcheck)
         run: make ci
       - name: Tooling tests (bats)
         run: make test
-      - name: ShellCheck (blocking)
-        run: make lint-shell
+        env:
+          POLARIS_STRICT: "1"   # the suite MUST run here; a missing bats fails, never skips
 
   lint:
     name: lint
