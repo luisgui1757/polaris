@@ -56,9 +56,13 @@ $END_PFX   = '<!-- AGENT-RULES:END -->'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Manifest = Join-Path $RepoRoot 'MANIFEST.json'
 
-function Read-TextLF([string]$path) {
-  $raw = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
-  return ($raw -replace "`r`n", "`n") -replace "`r", "`n"
+function Read-TextRaw([string]$path) {
+  # RAW bytes as UTF-8, NO line-ending normalization. The bash installer reads
+  # raw (cat/awk) and compares with `cmp`; normalizing here would make `-Check`
+  # accept a CRLF target that `tools/install --check` rejects -- breaking the
+  # cross-platform byte-identity guarantee. .gitattributes forces LF on the
+  # committed tree, so a normal checkout is already LF on both platforms.
+  return [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
 }
 
 function Write-TextLF([string]$path, [string]$content) {
@@ -85,7 +89,11 @@ function Get-RenderedBundle {
     if ([string]::IsNullOrEmpty($rel)) { continue }
     $p = Join-Path $RepoRoot $rel
     if (-not (Test-Path -LiteralPath $p)) { throw "polaris: missing core file: $rel" }
-    $raw = Read-TextLF $p
+    $raw = Read-TextRaw $p
+    if ($raw.Length -eq 0) {
+      # awk emits ZERO records for an empty file -- only the separator follows.
+      [void]$out.Append($LF); $emitted = 1; continue
+    }
     # awk record model: a trailing newline does not create an empty final record.
     if ($raw.EndsWith($LF)) { $raw = $raw.Substring(0, $raw.Length - 1) }
     $lines = $raw.Split([char]10)
@@ -112,7 +120,7 @@ function Get-RenderedBlock {
   $ver = 'dev'
   $vfile = Join-Path $RepoRoot 'VERSION'
   if (Test-Path -LiteralPath $vfile) {
-    $v = (Read-TextLF $vfile) -replace '[ \r\n]', ''
+    $v = (Read-TextRaw $vfile) -replace '[ \r\n]', ''
     if (-not [string]::IsNullOrEmpty($v)) { $ver = $v }
   }
   $bundle = Get-RenderedBundle
@@ -137,7 +145,7 @@ function Get-RenderedBlock {
 
 function Test-HasBeginMarker([string]$path) {
   if (-not (Test-Path -LiteralPath $path)) { return $false }
-  foreach ($line in (Read-TextLF $path).Split([char]10)) {
+  foreach ($line in (Read-TextRaw $path).Split([char]10)) {
     if ($line.StartsWith($BEGIN_PFX)) { return $true }
   }
   return $false
@@ -147,7 +155,7 @@ function Test-HasBeginMarker([string]$path) {
 # BEGIN with no matching END.
 function Get-ComposedContent([string]$target, [string]$block) {
   if ((Test-Path -LiteralPath $target) -and (Test-HasBeginMarker $target)) {
-    $raw = Read-TextLF $target
+    $raw = Read-TextRaw $target
     if ($raw.EndsWith($LF)) { $raw = $raw.Substring(0, $raw.Length - 1) }
     $lines = $raw.Split([char]10)
     $result = [System.Text.StringBuilder]::new()
@@ -164,14 +172,14 @@ function Get-ComposedContent([string]$target, [string]$block) {
     if ($skip) { throw 'UNTERMINATED' }
     return $result.ToString()
   } else {
-    if (Test-Path -LiteralPath $target) { return (Read-TextLF $target) + $LF + $block }
+    if (Test-Path -LiteralPath $target) { return (Read-TextRaw $target) + $LF + $block }
     return $block
   }
 }
 
 # Port of remove_block. Throws 'UNTERMINATED' on a BEGIN with no matching END.
 function Get-RemovedContent([string]$target) {
-  $raw = Read-TextLF $target
+  $raw = Read-TextRaw $target
   if ($raw.EndsWith($LF)) { $raw = $raw.Substring(0, $raw.Length - 1) }
   $lines = $raw.Split([char]10)
   $result = [System.Text.StringBuilder]::new()
@@ -214,6 +222,13 @@ function Get-Targets([string]$scope, [string]$targetDir) {
 
 # --- resolve scope/action/target ---
 $scope = if ($Global) { 'global' } else { 'repo' }
+# Named switches lose command-line order, so a conflict cannot resolve to bash's
+# "last flag wins". Refuse rather than silently pick one -- especially since one
+# of them (-Remove) is destructive.
+$actionSwitches = @($Check, $Remove, $DryRun | Where-Object { $_ }).Count
+if ($actionSwitches -gt 1) {
+  [Console]::Error.WriteLine('install: choose at most one of -Check, -Remove, -DryRun.'); exit 2
+}
 $action = 'write'
 if ($Check)  { $action = 'check' }
 if ($DryRun) { $action = 'dry' }
@@ -222,7 +237,7 @@ if ($Remove) { $action = 'remove' }
 $targetDir = $RepoRoot
 if ($Target) {
   if (-not (Test-Path -LiteralPath $Target -PathType Container)) {
-    Write-Error "install: -Target directory not found: $Target"; exit 2
+    [Console]::Error.WriteLine("install: -Target directory not found: $Target"); exit 2
   }
   $targetDir = (Resolve-Path -LiteralPath $Target).Path
 }
@@ -237,7 +252,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
       if (Test-HasBeginMarker $t) {
         try {
           $composed = Get-ComposedContent $t $block
-          if ((Read-TextLF $t) -eq $composed) { Write-Output "ok:      $t" }
+          if ((Read-TextRaw $t) -eq $composed) { Write-Output "ok:      $t" }
           else { Write-Output "DRIFT:   $t"; $status = 1 }
         } catch {
           Write-Output "MALFORMED: $t (AGENT-RULES:BEGIN without AGENT-RULES:END)"; $status = 1
@@ -254,14 +269,14 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
           if ($out -match '[^\s]') { Write-TextLF $t $out; Write-Output "removed block: $t (kept surrounding content)"; $changed = 1 }
           else { Remove-Item -LiteralPath $t; Write-Output "removed file:  $t (was Polaris-only)"; $changed = 1 }
         } catch {
-          Write-Error "install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to edit."; $status = 1
+          [Console]::Error.WriteLine("install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to edit."); $status = 1
         }
       } else { Write-Output "absent:  $t (no managed block to remove)" }
     }
     'dry' {
       try {
         $composed = Get-ComposedContent $t $block
-        if ((-not (Test-Path -LiteralPath $t)) -or ((Read-TextLF $t) -ne $composed)) { Write-Output "would write: $t" }
+        if ((-not (Test-Path -LiteralPath $t)) -or ((Read-TextRaw $t) -ne $composed)) { Write-Output "would write: $t" }
         else { Write-Output "unchanged:   $t" }
       } catch {
         Write-Output "would REFUSE: $t (AGENT-RULES:BEGIN without AGENT-RULES:END -- fix markers)"; $status = 1
@@ -272,10 +287,10 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
       if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
       try {
         $composed = Get-ComposedContent $t $block
-        if ((Test-Path -LiteralPath $t) -and ((Read-TextLF $t) -eq $composed)) { Write-Output "unchanged: $t" }
+        if ((Test-Path -LiteralPath $t) -and ((Read-TextRaw $t) -eq $composed)) { Write-Output "unchanged: $t" }
         else { Write-TextLF $t $composed; Write-Output "wrote:     $t"; $changed = 1 }
       } catch {
-        Write-Error "install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to write (would drop your trailing content). Fix the markers."
+        [Console]::Error.WriteLine("install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to write (would drop your trailing content). Fix the markers.")
         $status = 1
       }
     }
