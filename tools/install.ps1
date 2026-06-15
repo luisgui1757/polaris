@@ -70,6 +70,19 @@ function Write-TextLF([string]$path, [string]$content) {
   [System.IO.File]::WriteAllText($path, $content, $enc)
 }
 
+# Byte-exact "is the file already this content?", matching bash `cmp`. Compares
+# the target's RAW bytes (BOM and all) against $content encoded UTF-8 no-BOM as it
+# would be written -- a string `-eq` would silently ignore a BOM or odd bytes that
+# `tools/install --check` (cmp) treats as drift.
+function Test-FileBytesEqual([string]$path, [string]$content) {
+  if (-not (Test-Path -LiteralPath $path)) { return $false }
+  $a = [System.IO.File]::ReadAllBytes($path)
+  $b = (New-Object System.Text.UTF8Encoding($false)).GetBytes($content)
+  if ($a.Length -ne $b.Length) { return $false }
+  for ($i = 0; $i -lt $a.Length; $i++) { if ($a[$i] -ne $b[$i]) { return $false } }
+  return $true
+}
+
 function Get-Sha256Hex([string]$content) {
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
   $sha = [System.Security.Cryptography.SHA256]::Create()
@@ -117,11 +130,15 @@ function Get-RenderedBundle {
 
 # Faithful port of render_block (markers + provenance header + inlined contract).
 function Get-RenderedBlock {
-  $ver = 'dev'
+  # Match bash exactly: a PRESENT VERSION yields its stripped content (even if
+  # that is empty); only a MISSING VERSION falls back to "dev". (bash:
+  # `ver=$(tr -d ' \r\n' < VERSION 2>/dev/null || echo dev)` -- the `||` fires on
+  # a missing file, not on empty content.)
   $vfile = Join-Path $RepoRoot 'VERSION'
   if (Test-Path -LiteralPath $vfile) {
-    $v = (Read-TextRaw $vfile) -replace '[ \r\n]', ''
-    if (-not [string]::IsNullOrEmpty($v)) { $ver = $v }
+    $ver = (Read-TextRaw $vfile) -replace '[ \r\n]', ''
+  } else {
+    $ver = 'dev'
   }
   $bundle = Get-RenderedBundle
   $sha = Get-Sha256Hex $bundle
@@ -252,7 +269,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
       if (Test-HasBeginMarker $t) {
         try {
           $composed = Get-ComposedContent $t $block
-          if ((Read-TextRaw $t) -eq $composed) { Write-Output "ok:      $t" }
+          if (Test-FileBytesEqual $t $composed) { Write-Output "ok:      $t" }
           else { Write-Output "DRIFT:   $t"; $status = 1 }
         } catch {
           Write-Output "MALFORMED: $t (AGENT-RULES:BEGIN without AGENT-RULES:END)"; $status = 1
@@ -276,7 +293,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
     'dry' {
       try {
         $composed = Get-ComposedContent $t $block
-        if ((-not (Test-Path -LiteralPath $t)) -or ((Read-TextRaw $t) -ne $composed)) { Write-Output "would write: $t" }
+        if (-not (Test-FileBytesEqual $t $composed)) { Write-Output "would write: $t" }
         else { Write-Output "unchanged:   $t" }
       } catch {
         Write-Output "would REFUSE: $t (AGENT-RULES:BEGIN without AGENT-RULES:END -- fix markers)"; $status = 1
@@ -287,7 +304,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
       if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
       try {
         $composed = Get-ComposedContent $t $block
-        if ((Test-Path -LiteralPath $t) -and ((Read-TextRaw $t) -eq $composed)) { Write-Output "unchanged: $t" }
+        if (Test-FileBytesEqual $t $composed) { Write-Output "unchanged: $t" }
         else { Write-TextLF $t $composed; Write-Output "wrote:     $t"; $changed = 1 }
       } catch {
         [Console]::Error.WriteLine("install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to write (would drop your trailing content). Fix the markers.")

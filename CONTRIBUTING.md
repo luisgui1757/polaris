@@ -45,10 +45,14 @@ bundle.
 ## Local setup
 
 ```bash
-make install-hooks   # pre-push gate mirroring CI
-make test            # bats tooling suite
-make ci              # the full gate
+make install-hooks   # pre-push gate (fast local subset of CI)
+make test            # bats tooling suite (incl. bash/pwsh byte-identity parity)
+make ci              # local gate: privacy scan + render + drift + lint + shellcheck
 ```
+
+The required CI gate runs more than local `make ci`: it sets `POLARIS_STRICT=1`
+(a missing linter/`bats`/`pwsh` fails instead of skipping), runs `make test` on
+Linux + macOS, and runs the PowerShell installer on a native Windows (amd64) job.
 
 ## Credits
 

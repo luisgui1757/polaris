@@ -94,15 +94,19 @@ private terms, create that file (one term per line) — `MANIFEST.json`'s
 ## Develop
 
 ```bash
-make ci             # the full check: privacy scan + render + drift  (run before pushing)
+make ci             # local gate: privacy scan + render + drift + lint + shellcheck
+make test           # bats tooling suite (incl. the bash/pwsh byte-identity parity)
 make install-hooks  # install a git pre-push hook that runs make ci for you
 make safeguards     # apply branch protection + merge rules to the GitHub repo
 make help           # list everything
 ```
 
-CI runs the same `make ci` on GitHub (`.github/workflows/ci.yml`); `main` is
-protected by the rulesets in `.github/rulesets/` (squash-only, required `ci`
-check, linear history).
+CI runs the SAME `make ci` on GitHub, plus more that the local gate does not: it
+sets `POLARIS_STRICT=1` (a missing linter/bats/pwsh fails instead of skipping),
+runs `make test` on Linux + macOS, and runs the PowerShell installer on a native
+**Windows (amd64)** job. So local `make ci` is the fast pre-push check, not the
+whole required gate (`.github/workflows/ci.yml`); `main` is protected by the
+rulesets in `.github/rulesets/` (squash-only, required `ci` check, linear history).
 
 `ROADMAP.md` tracks remaining work and is deleted once the repo matures.
 

@@ -57,6 +57,14 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
   `ci`/review; non-owners stay fully gated (PR + code-owner review + strict
   `ci`). Source files, `settings.yml`, and the safeguards verifier updated to
   match. Kept in public by design — avoids leaking WIP into public PR diffs.
+- Both installers now REFUSE more than one action flag (e.g. `--remove --check`)
+  instead of silently letting the last one win — removing a destructive shortcut
+  on both `tools/install` and `tools/install.ps1`. The bash/pwsh byte-identity
+  guarantee is hardened on boundary inputs (empty `VERSION`, BOM/odd-byte targets
+  compared byte-exact like `cmp`) and `.gitattributes` forces LF on the
+  extensionless `tools/`+`scripts/` shell entrypoints. The Windows installer is
+  proven on amd64 (the real Windows target) by the `windows-latest` job and the
+  strict-required bash/pwsh parity test on the amd64 Linux runner.
 - Gates are now strict, never silently skipped (gold-standard "a check you did
   not run is not evidence"): `POLARIS_STRICT=1` (set by CI and `release-check`)
   makes a missing linter or missing `bats` a FAILURE instead of a skip; locally a

@@ -22,3 +22,9 @@ VERSION    text eol=lf
 LICENSE    text eol=lf
 .gitignore text eol=lf
 Makefile   text eol=lf
+
+# The shell tooling is extensionless (tools/install, tools/check, ...), so the
+# *.sh rule above misses it. Force LF on the whole tools/ and scripts/ trees so a
+# Windows checkout never CRLF-corrupts an interpreter line or the rendered output.
+tools/*    text eol=lf
+scripts/*  text eol=lf
