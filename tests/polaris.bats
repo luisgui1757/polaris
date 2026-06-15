@@ -203,8 +203,18 @@ scan() { bash -c "source '$ROOT/tools/polaris-lib.sh'; $1 2>&1"; }
   grep -q '^<!-- AGENT-RULES:BEGIN' "$g/.claude/CLAUDE.md"
 }
 
-@test "install.ps1 renders byte-identical to the bash installer (if pwsh present)" {
-  command -v pwsh >/dev/null 2>&1 || skip "pwsh not installed"
+# pwsh is REQUIRED in strict mode (CI runs strict): the bash-vs-pwsh byte-identity
+# parity is the only thing that proves the Windows installer is correct, and it
+# runs on the amd64 ubuntu runner -- the same architecture Windows actually ships
+# on. A coincidentally-missing pwsh must FAIL loudly here, never silently skip.
+@test "install.ps1 renders byte-identical to the bash installer (amd64 parity)" {
+  if ! command -v pwsh >/dev/null 2>&1; then
+    if [ "${POLARIS_STRICT:-0}" = 1 ]; then
+      echo "pwsh is REQUIRED in strict mode (amd64 Windows-parity coverage); not installed."
+      return 1
+    fi
+    skip "pwsh not installed (set POLARIS_STRICT=1 to require it)"
+  fi
   a="$TMP/psa"; b="$TMP/psb"; mkdir -p "$a" "$b"
   bash "$ROOT/tools/install" --target "$a" >/dev/null
   pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Target "$b" >/dev/null
@@ -213,8 +223,14 @@ scan() { bash -c "source '$ROOT/tools/polaris-lib.sh'; $1 2>&1"; }
   done
 }
 
-@test "install.ps1 --check agrees the committed entrypoints are drift-free (if pwsh present)" {
-  command -v pwsh >/dev/null 2>&1 || skip "pwsh not installed"
+@test "install.ps1 --check agrees the committed entrypoints are drift-free (amd64 parity)" {
+  if ! command -v pwsh >/dev/null 2>&1; then
+    if [ "${POLARIS_STRICT:-0}" = 1 ]; then
+      echo "pwsh is REQUIRED in strict mode (amd64 Windows-parity coverage); not installed."
+      return 1
+    fi
+    skip "pwsh not installed (set POLARIS_STRICT=1 to require it)"
+  fi
   run pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Check
   [ "$status" -eq 0 ]
   [[ "$output" == *"blocks up to date"* ]]
