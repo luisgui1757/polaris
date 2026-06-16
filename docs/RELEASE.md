@@ -6,8 +6,9 @@ traceable.
 1. Land external changes via PR (CI green on the `ci` check). The repo owner may
    direct-push via the intentional ruleset bypass — see `CONTRIBUTING.md`.
 2. `CHANGELOG.md`: move the `Unreleased` items under a new `## [x.y.z]` heading,
-   and record the **`bundle-sha256`** (the value in the generated adapter header,
-   or `polaris_bundle_sha256 core MANIFEST.json`) so consumers can pin it.
+   and record the **`bundle-sha256`** so consumers can pin it — read it from the
+   generated adapter header, or recompute with
+   `bash -c 'source tools/polaris-lib.sh; polaris_bundle_sha256 core MANIFEST.json'`.
 3. Bump `VERSION` to `x.y.z`.
 4. `make install` — regenerate adapters with the new version stamp.
 5. `make ci` — leak scan + render smoke + adapter drift.
