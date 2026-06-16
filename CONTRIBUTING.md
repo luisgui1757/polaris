@@ -39,8 +39,11 @@ bundle.
 - Conventional commit subjects (`feat:`, `fix:`, `chore:`, `docs:`, `review:`),
   imperative mood, ≤72 chars.
 - One concern per commit where practical.
-- All changes land via PR; `main` is protected (squash-only merge, linear
-  history, required `ci` check) — see `.github/rulesets/`.
+- External contributions land via PR; `main` is protected for everyone but the
+  owner — squash-only merge, linear history, required `ci` check, mandatory
+  code-owner review (see `.github/rulesets/`). The repo owner holds an
+  intentional `always` bypass to push directly (by design; see `ROADMAP.md`), so
+  not every commit on `main` came through a PR.
 
 ## Local setup
 

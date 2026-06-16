@@ -5,6 +5,18 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.0] - 2026-06-16
+
+First tagged release. Pin to the tag `v0.1.0` and verify the rendered rules with:
+
+**bundle-sha256:** `4b85911c73f793da9b812ba6c83eb07933b267a155c1ca0391fc3071ac4b3a5c`
+
+```bash
+tools/verify-vendor <vendored-dir> 4b85911c73f793da9b812ba6c83eb07933b267a155c1ca0391fc3071ac4b3a5c
+```
+
 ### Added
 - Auto-ingestion installer (`tools/install`): inlines the core into each tool's
   native entrypoint; `--target`, `--global`, `--check`, `--dry-run`, and
@@ -112,10 +124,6 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 ### Removed
 - `ROADMAP.html` — the canonical roadmap is `ROADMAP.md` (Markdown: diffable,
   grep-able, GitHub-native).
-
-## [0.1.0]
-
-Initial Polaris: core rules, generic tooling, and consumer templates.
 
 [Keep a Changelog]: https://keepachangelog.com/
 [Semantic Versioning]: https://semver.org/

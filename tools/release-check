@@ -16,7 +16,9 @@ if [[ ! -f CHANGELOG.md ]]; then
 fi
 # Escape regex metacharacters in the version (the dots are literal, not wildcards).
 ver_re=$(printf '%s' "$ver" | sed 's/[][\.*^$/]/\\&/g')
-if ! grep -qE "^## .*\[?${ver_re}\]?" CHANGELOG.md; then
+# Anchor on the RIGHT so a prefix like 0.1 cannot false-match a [0.1.0] heading:
+# the version must be followed by a non-version char (']', space, end of line).
+if ! grep -qE "^## .*\[?${ver_re}\]?([^0-9.]|$)" CHANGELOG.md; then
   echo "release-check: CHANGELOG.md has no section for version ${ver}" >&2; exit 1
 fi
 echo "release-check: VERSION=${ver} has a CHANGELOG entry."

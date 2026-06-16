@@ -20,6 +20,18 @@ writes the rules into that file. That's the whole trick.
 
 ---
 
+## Get it
+
+```bash
+git clone https://github.com/luisgui1757/polaris.git
+cd polaris
+```
+
+Run everything below from that checkout. (Prefer to vendor a pinned copy instead
+of installing? See [`consumers.md`](consumers.md).)
+
+---
+
 ## Use it
 
 > Run these from your Polaris checkout — the commands use the repo-relative
@@ -49,10 +61,18 @@ ones that never heard of Polaris — carries the rules. (Per-machine; not shared
 
 ### 3. Change the rules
 
-Edit a file in `core/`, then re-run `tools/install` (or `--global`). `tools/install --check`
-tells you if anything is out of date.
+Edit a file in `core/`, then re-run `tools/install` (or `--global`).
 
-That's it. The three commands above cover everything.
+### 4. Check, verify, or remove
+
+```bash
+tools/install --check    # are the blocks up to date? (drift check; used in CI)
+make status              # where are the rules installed?
+tools/install --remove   # uninstall — keeps any text you wrote around the block
+```
+
+To confirm a tool actually *loaded* the rules, ask it in chat: *"What does your
+loaded contract say under Modes?"* If it can answer, the block is in context.
 
 ---
 
@@ -67,8 +87,11 @@ live in `core/` and get inlined into the entrypoint your tool auto-loads:
 | Claude Code | `CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | Codex | `AGENTS.md` | `~/.codex/AGENTS.md` |
 | GitHub Copilot | `.github/copilot-instructions.md` | *(set in VS Code / github.com — manual)* |
-| opencode | `AGENTS.md` | `~/.config/opencode/AGENTS.md` |
+| opencode&nbsp;† | `AGENTS.md` | `~/.config/opencode/AGENTS.md` |
 | pi | `AGENTS.md` | `~/.pi/agent/AGENTS.md` |
+
+† opencode auto-load is documented but **not yet verified on a live install** —
+see [`docs/tool-ingestion.md`](docs/tool-ingestion.md). The other four are confirmed.
 
 A repo can add its own rules *around* the Polaris block — re-running install only
 touches the block, never your text.
@@ -78,16 +101,33 @@ touches the block, never your text.
 ## Privacy
 
 Polaris is meant to be shareable, so it must never leak your private projects.
-The public files only ever contain generic patterns; your private project names
-live in `tools/forbidden-terms.local` (gitignored, never committed). `make check`
-scans the whole repo and **fails** if a private term or home path slips in — and
-it reports the location without ever printing the term.
+`make check` scans the whole repo and **fails** if a private term or home path
+slips in, reporting the location without ever printing the term. The shipped
+files only ever contain generic patterns (home paths); your *own* private project
+names live in `tools/forbidden-terms.local` — gitignored, never committed, and
+wired in via `MANIFEST.json`'s `local_denylist` key. Create it (one term per
+line) to scan for your terms too. Full guarantee and limits:
+[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
-The private-term denylist is **yours**: `tools/forbidden-terms.local` is
-gitignored and never committed, so a fresh clone's `make check` enforces only the
-generic home-path patterns shipped in `MANIFEST.json`. To also scan for your own
-private terms, create that file (one term per line) — `MANIFEST.json`'s
-`local_denylist` key already wires it in.
+---
+
+## Repository layout
+
+| Path | What's there |
+| --- | --- |
+| `MANIFEST.json` | the machine-readable contract: core read-order, term policy, byte budget — **start here** |
+| `core/` | the rules themselves (read in the order `MANIFEST.json` → `required_core_read_order`) |
+| `tools/` | installer (`install`, `install.ps1`) + checks (`check`, `ci`, `lint`, `render`, `status`, `verify-vendor`) |
+| `scripts/` | one-shot repo safeguards (branch protection) |
+| `docs/` | threat model, per-tool ingestion notes, release process |
+| `templates/` | overlay + adapter templates for consumers |
+| `schemas/` | JSON Schema for `MANIFEST.json` |
+| `tests/` | the bats regression suite |
+| `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` | **generated** rule blocks (this repo dogfooding its own installer) — don't hand-edit |
+
+**Working on the rules?** Edit `core/`, run `tools/install`, commit the
+regenerated adapters. **Just reading?** `MANIFEST.json` + the files it lists are
+the whole rulebook.
 
 ---
 

@@ -1,3 +1,7 @@
+> **Generated file** — the block below is rendered from `core/` by `tools/install`.
+> Don't edit it here. To work on the Polaris repo itself, start at `README.md` and
+> `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
+
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
 <!-- version: 0.1.0  sha256: 4b85911c73f793da9b812ba6c83eb07933b267a155c1ca0391fc3071ac4b3a5c -->
 
