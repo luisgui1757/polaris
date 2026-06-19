@@ -5,7 +5,57 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- `core/REVIEW_PROTOCOL.md` is now part of the required injected bundle, with
+  generated-adapter coverage proving REVIEW mode has no dangling protocol
+  reference.
+- `templates/adapters/tool-metadata.tsv` is the canonical supported-tool matrix
+  for adapter paths, global paths, install scope, binaries, imports, and dated
+  evidence status.
+- `tools/ruleset-check` semantically verifies the checked-in or live GitHub
+  rulesets: active `main` targeting, owner `always` bypass, strict required
+  GitHub Actions `ci`, squash-only PRs, review requirements, linear history, and
+  update/delete/non-fast-forward protection.
+- `make preflight` names the fast local check surface, and `make gate` runs the
+  strongest local proof: strict preflight, ruleset verification, bats, and the
+  PowerShell drift check.
+- Consumer onboarding now includes a proof checklist in `templates/OVERLAY.md`
+  and hash-required vendor verification guidance.
+
+### Changed
+- `tools/status` now compares the full managed block against freshly composed
+  adapter output instead of trusting only the stamped header hash; tampered
+  bodies now report stale. Global Codex status now reports `overridden` when an
+  existing `AGENTS.override.md` would shadow the installed `AGENTS.md`, and
+  `tools/install --global` warns about that state.
+- Manifest handling is stricter everywhere: `core_dir` is honored, required and
+  optional core files must exist, unsafe absolute/parent paths are rejected, and
+  JSON Schema mirrors those containment rules.
+- `tools/verify-vendor` now requires the expected `bundle-sha256` by default.
+  The old non-integrity behavior is available only through explicit
+  `--structure-only`.
+- `tools/release-check` now requires a clean index/worktree with no untracked
+  files, rejects existing local/checkable remote version tags, verifies the
+  exact current bundle hash in the matching changelog section, and prints the
+  certified commit. Regression tests now prove it invokes and propagates
+  failures from adapter drift, local CI, and bats gates.
+- Tool-ingestion docs and README claims now distinguish `live-verified`,
+  `docs-confirmed`, and `local-package-confirmed` surfaces instead of implying
+  every supported tool has the same proof level.
+- `scripts/apply-repo-safeguards.sh` now runs semantic ruleset verification
+  before applying local JSON and after applying live GitHub rulesets.
+- `tools/install.ps1` now writes through a target-directory temp file and atomic
+  replace/move instead of rewriting adapter files directly.
+- Gate docs now distinguish local preflight, strongest local gate, and the
+  required GitHub `ci` aggregate. `yamllint` line length is an error, not a
+  warning, after wrapping the workflow lines that previously warned.
+
+### Fixed
+- Rewrote `polaris_check_core` path resolution to avoid the `A && B || C` shell
+  idiom that older CI ShellCheck versions flag, while preserving the manifest
+  `core_dir` mismatch check.
+- Made `tools/status` home-relative path display deterministic across Bash
+  versions, fixing the Ubuntu-only Codex `AGENTS.override.md` status test.
 
 ## [0.1.0] - 2026-06-16
 
@@ -43,7 +93,7 @@ tools/verify-vendor <vendored-dir> 4b85911c73f793da9b812ba6c83eb07933b267a155c1c
 - `core/EXECUTION.md` (always-on execution discipline).
 - Observability and provenance: `tools/status`, `tools/verify-vendor`.
 - `tests/` bats regression suite; cross-platform (Linux + macOS) CI matrix with a
-  stable `ci` gate; ShellCheck (advisory).
+  stable `ci` gate.
 - CI `lint` job (required via the `ci` gate): **gitleaks** secret-shape scan,
   **yamllint**, and **editorconfig-checker**, with configs that pass the tree.
 - `consumers.md` records Polaris's own dogfood install.
@@ -81,7 +131,7 @@ tools/verify-vendor <vendored-dir> 4b85911c73f793da9b812ba6c83eb07933b267a155c1c
   not run is not evidence"): `POLARIS_STRICT=1` (set by CI and `release-check`)
   makes a missing linter or missing `bats` a FAILURE instead of a skip; locally a
   skip is loud and the summary names what was skipped. ShellCheck is now
-  **blocking** (was advisory), runs from one source (`tools/lint-shell`,
+  **blocking**, runs from one source (`tools/lint-shell`,
   `--source-path=SCRIPTDIR`), and is part of `tools/ci`. `release-check` now runs
   the bats suite (it could previously pass without it). The canonical manifest
   schema is now ENFORCED in CI via `check-jsonschema` (was a doc-only reference).

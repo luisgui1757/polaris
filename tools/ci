@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Polaris local CI gate -- the same checks GitHub runs, runnable on your machine.
+# Polaris local preflight gate, runnable on your machine.
 #
-# Runs the privacy leak scan, a render smoke test, and the adapter drift check.
-# `make install-hooks` wires this into a git pre-push hook so it runs before every
-# push, mirroring the GitHub `ci` status check. See README.md.
+# Runs the privacy leak scan, render smoke test, adapter drift check, semantic
+# ruleset check, lint, and ShellCheck. GitHub's required `ci` aggregate is
+# stronger: it adds OS matrix tests, strict lint, and native Windows proof.
 set -euo pipefail
 export LC_ALL=C
 
@@ -17,6 +17,9 @@ bash "$SCRIPT_DIR/render" > /dev/null
 
 echo "polaris ci: adapter drift check"
 bash "$SCRIPT_DIR/install" --check
+
+echo "polaris ci: ruleset semantics"
+bash "$SCRIPT_DIR/ruleset-check"
 
 echo "polaris ci: lint (yaml + editorconfig + secrets + schema)"
 bash "$SCRIPT_DIR/lint"

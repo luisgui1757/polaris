@@ -9,6 +9,6 @@ rules:
     check-keys: false
   line-length:
     max: 120
-    level: warning
+    level: error
   # Keep the genuinely useful structural checks strict.
   key-duplicates: enable

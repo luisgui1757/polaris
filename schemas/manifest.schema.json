@@ -10,6 +10,7 @@
     "name",
     "core_dir",
     "required_core_read_order",
+    "optional_core_files",
     "forbidden_core_terms"
   ],
   "properties": {
@@ -26,18 +27,27 @@
     "description": { "type": "string" },
     "core_dir": {
       "type": "string",
+      "const": "core",
+      "pattern": "^(?!/)(?!.*(^|/)\\.\\.?(/|$))(?!.*//)(?!.*\\\\)(?!.*:).+$",
       "description": "Directory holding the core rule files, relative to the manifest."
     },
     "required_core_read_order": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string" },
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*(^|/)\\.\\.?(/|$))(?!.*//)(?!.*\\\\)(?!.*:)core/.+$"
+      },
       "description": "Ordered core files that make up the always-injected bundle."
     },
     "optional_core_files": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Core files that exist but are not injected (e.g. BOOTSTRAP, REVIEW_PROTOCOL)."
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*(^|/)\\.\\.?(/|$))(?!.*//)(?!.*\\\\)(?!.*:)core/.+$"
+      },
+      "description": "Core files that exist but are not injected (e.g. BOOTSTRAP, ADAPTERS)."
     },
     "forbidden_core_terms": {
       "type": "array",
@@ -46,6 +56,7 @@
     },
     "local_denylist": {
       "type": "string",
+      "pattern": "^(?!/)(?!.*(^|/)\\.\\.?(/|$))(?!.*//)(?!.*\\\\)(?!.*:).+$",
       "description": "Path (relative to the manifest) of the gitignored private denylist. Defaults to tools/forbidden-terms.local."
     },
     "render_budget_bytes": {

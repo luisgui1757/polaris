@@ -21,7 +21,7 @@ REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 source "$SCRIPT_DIR/polaris-lib.sh"
 
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/core"
+CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
 status=0
 
 # 1. Core structure + core-directory term scan.

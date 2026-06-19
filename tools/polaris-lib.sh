@@ -85,7 +85,39 @@ polaris_manifest_array() {
   ' "$file" | sed 's/\\\\/\\/g; s/\\"/"/g'   # best-effort JSON unescape to match jq
 }
 
-# List core files relative to the manifest's core layout.
+# Validate a manifest-owned repo path. Paths are stored as POSIX-style repo
+# paths, so absolute paths, parent traversal, empty segments, and backslashes are
+# not portable and are not allowed.
+_polaris_validate_relpath() {
+  local label=$1 rel=$2
+  if [[ -z "$rel" ]]; then
+    echo "polaris: $label must not be empty" >&2
+    return 1
+  fi
+  case "$rel" in
+    /*|*\\*|*'//'|*:*) echo "polaris: $label must be a contained repo-relative POSIX path: $rel" >&2; return 1 ;;
+  esac
+  local old_ifs=$IFS part
+  IFS=/
+  for part in $rel; do
+    case "$part" in
+      ""|"."|"..") IFS=$old_ifs; echo "polaris: $label contains an unsafe path segment: $rel" >&2; return 1 ;;
+    esac
+  done
+  IFS=$old_ifs
+}
+
+# Read and validate the manifest's core_dir.
+# polaris_manifest_core_dir <manifest>
+polaris_manifest_core_dir() {
+  local manifest=$1 core_dir
+  core_dir=$(polaris_manifest_value "$manifest" core_dir)
+  [[ -n "$core_dir" ]] || { echo "polaris: manifest missing core_dir" >&2; return 1; }
+  _polaris_validate_relpath core_dir "$core_dir" || return 1
+  printf '%s\n' "$core_dir"
+}
+
+# List core files relative to the manifest root.
 # polaris_core_files <manifest> [required|all]   (default: all)
 polaris_core_files() {
   local manifest=$1 scope=${2:-all}
@@ -93,6 +125,63 @@ polaris_core_files() {
   if [[ "$scope" == "all" ]]; then
     polaris_manifest_array "$manifest" optional_core_files
   fi
+}
+
+# Validate manifest path containment and declared file presence.
+# polaris_check_manifest_paths <manifest>
+polaris_check_manifest_paths() {
+  local manifest=$1 base core_dir rel field label failed=0 required_seen=0 optional_seen=0
+  [[ -f "$manifest" ]] || { echo "polaris: missing manifest: $manifest" >&2; return 1; }
+  base=$(cd "$(dirname "$manifest")" && pwd)
+  core_dir=$(polaris_manifest_core_dir "$manifest") || failed=1
+  if [[ -n "${core_dir:-}" ]]; then
+    if [[ ! -d "$base/$core_dir" || -L "$base/$core_dir" ]]; then
+      echo "polaris: core_dir must be a real directory: $core_dir" >&2
+      failed=1
+    fi
+  fi
+
+  for field in required_core_read_order optional_core_files; do
+    if [[ "$field" == required_core_read_order ]]; then
+      label=required
+    else
+      label=optional
+    fi
+    while IFS= read -r rel; do
+      if [[ "$field" == required_core_read_order ]]; then
+        required_seen=1
+      else
+        optional_seen=1
+      fi
+      _polaris_validate_relpath "$field" "$rel" || { failed=1; continue; }
+      if [[ -n "${core_dir:-}" && "$rel" != "$core_dir/"* ]]; then
+        echo "polaris: core file is outside core_dir '$core_dir': $rel" >&2
+        failed=1
+        continue
+      fi
+      if [[ ! -f "$base/$rel" || -L "$base/$rel" ]]; then
+        echo "polaris: missing $label core file: $rel" >&2
+        failed=1
+      fi
+    done < <(polaris_manifest_array "$manifest" "$field")
+  done
+
+  if [[ "$required_seen" -eq 0 ]]; then
+    echo "polaris: manifest required_core_read_order must list at least one core file" >&2
+    failed=1
+  fi
+  if [[ "$optional_seen" -eq 0 ]]; then
+    echo "polaris: manifest optional_core_files must list optional core files" >&2
+    failed=1
+  fi
+
+  local local_denylist
+  local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+  if [[ -n "$local_denylist" ]]; then
+    _polaris_validate_relpath local_denylist "$local_denylist" || failed=1
+  fi
+
+  return "$failed"
 }
 
 # Print the merged forbidden-term list, one TAB-tagged entry per line:
@@ -118,6 +207,7 @@ polaris_forbidden_terms() {
     # Default location if the manifest names none, so the private scan still
     # works when the manifest key is absent (or has been reverted).
     [[ -z "$local_denylist" ]] && local_denylist="tools/forbidden-terms.local"
+    _polaris_validate_relpath local_denylist "$local_denylist" || return 1
     if [[ -f "$base/$local_denylist" ]]; then
       # One term per line; strip "#" comments, blank lines, and surrounding space.
       sed -e 's/[[:space:]]*#.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
@@ -146,9 +236,12 @@ polaris_forbidden_terms() {
 # polaris_scan_terms <manifest> [--private] <path...>
 polaris_scan_terms() {
   local manifest=$1; shift
-  local filter=all
+  local filter=all local_denylist
   if [[ "${1:-}" == "--private" ]]; then filter=L; shift; fi
   [[ $# -gt 0 ]] || return 0
+  local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+  [[ -z "$local_denylist" ]] && local_denylist="tools/forbidden-terms.local"
+  _polaris_validate_relpath local_denylist "$local_denylist" || return 1
 
   # Collect every private term, then sort longest-first for safe masking.
   local lterms=() o t
@@ -205,6 +298,10 @@ polaris_scan_terms() {
 polaris_scan_pathnames() {
   local manifest=$1; shift
   [[ $# -gt 0 ]] || return 0
+  local local_denylist
+  local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+  [[ -z "$local_denylist" ]] && local_denylist="tools/forbidden-terms.local"
+  _polaris_validate_relpath local_denylist "$local_denylist" || return 1
   local paths=("$@")
 
   local lterms=() o t
@@ -244,12 +341,31 @@ polaris_scan_pathnames() {
 # Emits diagnostics to stderr; returns 0 on success, 1 on any failure.
 polaris_check_core() {
   local core_dir=$1 manifest=$2
-  local base failed=0
+  local base manifest_core_dir expected_core_dir actual_core_dir failed=0
   base=$(cd "$(dirname "$manifest")" && pwd)
 
   if [[ ! -f "$manifest" ]]; then
     echo "polaris: missing manifest: $manifest" >&2
     return 1
+  fi
+
+  polaris_check_manifest_paths "$manifest" || failed=1
+  manifest_core_dir=$(polaris_manifest_core_dir "$manifest" 2>/dev/null || true)
+  if [[ -n "$manifest_core_dir" ]]; then
+    if expected_core_dir=$(cd "$base/$manifest_core_dir" 2>/dev/null && pwd); then
+      :
+    else
+      expected_core_dir=""
+    fi
+    if actual_core_dir=$(cd "$core_dir" 2>/dev/null && pwd); then
+      :
+    else
+      actual_core_dir=""
+    fi
+    if [[ -n "$expected_core_dir" && -n "$actual_core_dir" && "$expected_core_dir" != "$actual_core_dir" ]]; then
+      echo "polaris: core_dir argument does not match manifest core_dir '$manifest_core_dir'" >&2
+      failed=1
+    fi
   fi
 
   local name
@@ -262,7 +378,7 @@ polaris_check_core() {
   local rel
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
-    if [[ ! -f "$base/$rel" ]]; then
+    if [[ ! -f "$base/$rel" || -L "$base/$rel" ]]; then
       echo "polaris: missing required core file: $rel" >&2
       failed=1
     fi
@@ -281,11 +397,13 @@ polaris_render_core() {
   local core_dir=$1 manifest=$2
   local base rel
   base=$(cd "$(dirname "$manifest")" && pwd)
+  polaris_check_manifest_paths "$manifest" || return 1
   printf '\n\n===== %s =====\n\n' "$(basename "$manifest")"
   cat "$manifest"
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
-    [[ -f "$base/$rel" ]] || { echo "polaris: missing core file: $rel" >&2; return 1; }
+    _polaris_validate_relpath core_file "$rel" || return 1
+    [[ -f "$base/$rel" && ! -L "$base/$rel" ]] || { echo "polaris: missing core file: $rel" >&2; return 1; }
     printf '\n\n===== %s =====\n\n' "$rel"
     cat "$base/$rel"
   done < <(polaris_core_files "$manifest" required)
@@ -301,9 +419,11 @@ polaris_render_bundle() {
   local core_dir=$1 manifest=$2
   local base rel emitted=0
   base=$(cd "$(dirname "$manifest")" && pwd)
+  polaris_check_manifest_paths "$manifest" || return 1
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
-    [[ -f "$base/$rel" ]] || { echo "polaris: missing core file: $rel" >&2; return 1; }
+    _polaris_validate_relpath core_file "$rel" || return 1
+    [[ -f "$base/$rel" && ! -L "$base/$rel" ]] || { echo "polaris: missing core file: $rel" >&2; return 1; }
     awk '
       /^```/ { fence = !fence }
       { if (!fence && $0 ~ /^#{1,6} /) print "#" $0; else print $0 }
@@ -326,7 +446,83 @@ polaris_render_bundle() {
 # computed so install, status, and verify-vendor always agree.
 # polaris_bundle_sha256 <core_dir> <manifest>
 polaris_bundle_sha256() {
-  polaris_render_bundle "$1" "$2" | polaris_sha256_stdin
+  local tmp rc
+  tmp=$(mktemp "${TMPDIR:-/tmp}/polaris-bundle.XXXXXX") || return 1
+  if polaris_render_bundle "$1" "$2" > "$tmp"; then
+    :
+  else
+    rc=$?
+    rm -f "$tmp"
+    return "$rc"
+  fi
+  polaris_sha256_stdin < "$tmp"
+  rc=$?
+  rm -f "$tmp"
+  return "$rc"
+}
+
+# Render the managed adapter block (markers + provenance header + inlined
+# contract). This is shared by install/status so they prove the same bytes.
+# polaris_render_managed_block <core_dir> <manifest> <version_file>
+polaris_render_managed_block() {
+  local core_dir=$1 manifest=$2 version_file=$3 ver bundle sha
+  ver=$(tr -d ' \r\n' < "$version_file" 2>/dev/null || echo dev)
+  bundle=$(polaris_render_bundle "$core_dir" "$manifest") || return 1
+  sha=$(polaris_bundle_sha256 "$core_dir" "$manifest") || return 1
+  printf '%s\n' "<!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->"
+  printf '%s\n' "<!-- version: $ver  sha256: $sha -->"
+  printf '\n%s\n\n' "# Operating Contract"
+  printf '%s\n' "Baseline engineering rules for this project, loaded automatically. Treat them as"
+  printf '%s\n' "the floor, not the ceiling: the active task and this repository's own conventions"
+  printf '%s\n\n' "may tighten them freely, and may relax one only with an explicit, documented justification."
+  printf '%s\n' "Precedence, highest first: runtime/platform safety; the active task; this"
+  printf '%s\n\n' "repository's conventions; the rules below; then personal global defaults."
+  printf '%s\n' "$bundle"
+  printf '%s\n' "<!-- AGENT-RULES:END -->"
+}
+
+# Compose target content with the block inserted into <out>: replace an existing
+# managed block in place (collapsing duplicates to one), otherwise append it.
+# Nonzero means the target has BEGIN without END and must not be overwritten.
+# polaris_compose_adapter <target> <blockfile> <out>
+polaris_compose_adapter() {
+  local target=$1 blockfile=$2 out=$3
+  if [[ -f "$target" ]] && grep -q '^<!-- AGENT-RULES:BEGIN' "$target"; then
+    awk -v bf="$blockfile" '
+      BEGIN { while ((getline line < bf) > 0) blk = blk line ORS }
+      /^<!-- AGENT-RULES:BEGIN/   { if (!done) { printf "%s", blk; done = 1 } skip = 1; next }
+      /^<!-- AGENT-RULES:END -->/ { if (skip) { skip = 0; next } }
+      skip { next }
+      { print }
+      END { if (skip) exit 3 }
+    ' "$target" > "$out" || return $?
+  else
+    : > "$out"
+    if [[ -f "$target" ]]; then
+      cat "$target" > "$out"
+      printf '\n' >> "$out"
+    fi
+    cat "$blockfile" >> "$out"
+  fi
+}
+
+# Canonical adapter target lists for executable tooling. Documentation may
+# describe these paths, but install/status consume this source so supported
+# targets do not drift between commands.
+polaris_repo_adapter_targets() {
+  local target_dir=$1
+  printf '%s\n' \
+    "$target_dir/AGENTS.md" \
+    "$target_dir/CLAUDE.md" \
+    "$target_dir/.github/copilot-instructions.md"
+}
+
+polaris_global_adapter_targets() {
+  printf '%s\n' \
+    "${CODEX_HOME:-$HOME/.codex}/AGENTS.md" \
+    "$HOME/.claude/CLAUDE.md" \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/AGENTS.md" \
+    "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/AGENTS.md"
 }
 
 # Recompute sha256 sums for the core files and print "<sum>  <relpath>".
@@ -351,12 +547,16 @@ polaris_core_sha256() {
 # Hash arbitrary content read from stdin; prints the bare sha256 hex digest.
 # polaris_sha256_stdin
 polaris_sha256_stdin() {
+  local out digest
   if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum | awk '{print $1}'
+    out=$(sha256sum) || return 1
   elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 | awk '{print $1}'
+    out=$(shasum -a 256) || return 1
   else
     echo "polaris: no sha256 tool (sha256sum or shasum) available" >&2
     return 1
   fi
+  digest=${out%%[[:space:]]*}
+  [[ -n "$digest" ]] || return 1
+  printf '%s\n' "$digest"
 }

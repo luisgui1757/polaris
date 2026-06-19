@@ -70,6 +70,25 @@ function Write-TextLF([string]$path, [string]$content) {
   [System.IO.File]::WriteAllText($path, $content, $enc)
 }
 
+function Write-TextLFAtomic([string]$path, [string]$content) {
+  $dir = Split-Path -Parent $path
+  if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+  $tmp = Join-Path $dir ('.polaris.' + [Guid]::NewGuid().ToString('N'))
+  try {
+    Write-TextLF $tmp $content
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+      [System.IO.File]::Replace($tmp, $path, [NullString]::Value, $true)
+    } elseif (Test-Path -LiteralPath $path) {
+      throw "install: target exists but is not a file: $path"
+    } else {
+      [System.IO.File]::Move($tmp, $path)
+    }
+  } catch {
+    if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
+    throw
+  }
+}
+
 # Byte-exact "is the file already this content?", matching bash `cmp`. Compares
 # the target's RAW bytes (BOM and all) against $content encoded UTF-8 no-BOM as it
 # would be written -- a string `-eq` would silently ignore a BOM or odd bytes that
@@ -283,7 +302,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
       if (Test-HasBeginMarker $t) {
         try {
           $out = Get-RemovedContent $t
-          if ($out -match '[^\s]') { Write-TextLF $t $out; Write-Output "removed block: $t (kept surrounding content)"; $changed = 1 }
+          if ($out -match '[^\s]') { Write-TextLFAtomic $t $out; Write-Output "removed block: $t (kept surrounding content)"; $changed = 1 }
           else { Remove-Item -LiteralPath $t; Write-Output "removed file:  $t (was Polaris-only)"; $changed = 1 }
         } catch {
           [Console]::Error.WriteLine("install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to edit."); $status = 1
@@ -305,7 +324,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
       try {
         $composed = Get-ComposedContent $t $block
         if (Test-FileBytesEqual $t $composed) { Write-Output "unchanged: $t" }
-        else { Write-TextLF $t $composed; Write-Output "wrote:     $t"; $changed = 1 }
+        else { Write-TextLFAtomic $t $composed; Write-Output "wrote:     $t"; $changed = 1 }
       } catch {
         [Console]::Error.WriteLine("install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to write (would drop your trailing content). Fix the markers.")
         $status = 1

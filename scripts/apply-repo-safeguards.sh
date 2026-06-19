@@ -103,8 +103,7 @@ try_gh_api() {
 ruleset_id_by_name() {
     local name="$1"
     gh api "repos/$repo/rulesets?includes_parents=false" \
-        --jq ".[] | select(.name == \"$name\") | .id" \
-        | head -n 1
+        | jq -r --arg name "$name" '[.[] | select(.name == $name) | .id] | first // empty'
 }
 
 upsert_ruleset() {
@@ -133,6 +132,8 @@ require_live_value() {
         exit 4
     fi
 }
+
+bash "$repo_root/tools/ruleset-check"
 
 echo "Applying repository safeguards to $repo"
 
@@ -211,5 +212,7 @@ require_live_value "review bypass actor" "$review_bypass" "User:${OWNER_ID}:alwa
 owner_updates_bypass="$(gh api "repos/$repo/rulesets/$owner_updates_id" \
     --jq '.bypass_actors[] | "\(.actor_type):\(.actor_id):\(.bypass_mode)"')"
 require_live_value "owner-updates bypass actor" "$owner_updates_bypass" "User:${OWNER_ID}:always"
+
+bash "$repo_root/tools/ruleset-check" --repo "$repo" --owner-id "$OWNER_ID"
 
 echo "Repository safeguards applied and verified. Re-run safely any time."

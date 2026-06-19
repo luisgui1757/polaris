@@ -15,6 +15,23 @@ tightens Polaris for your project. It must not restate Polaris wholesale.
 - [Build / serve / test commands.]
 - [The full local gate command, e.g. `make ci`.]
 
+## Adoption Checklist
+
+- [ ] Chosen path is explicit: installed adapters committed to the repo, or
+  vendored `core/` + `MANIFEST.json` pinned to a Polaris commit and
+  `bundle-sha256`.
+- [ ] Drift/integrity gate is documented: `tools/install --check` for installed
+  adapters, or `tools/verify-vendor <vendor-dir> <bundle-sha256>` for vendored
+  rules.
+- [ ] Project overlay does not restate Polaris wholesale; it only adds
+  project-specific facts, commands, invariants, and review-ledger locations.
+- [ ] Commands in this overlay were run or verified in this repo after adoption;
+  stale placeholder commands were removed.
+- [ ] Review findings, rejected findings, and assumptions have a durable
+  location that future reviewers can append to.
+- [ ] Supported AI entrypoints in this repo are listed, with any intentionally
+  unsupported surfaces named so missing files are not mistaken for drift.
+
 ## Review Ledgers
 
 - [Where findings, rejected findings, and assumptions live.]

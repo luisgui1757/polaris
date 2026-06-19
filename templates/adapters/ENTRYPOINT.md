@@ -6,16 +6,17 @@ This is the portable entrypoint any coding assistant reads first.
 
 1. `<vendor>/MANIFEST.json`
 2. `<vendor>/core/MODES.md`
-3. `<vendor>/core/INVARIANTS.md`
-4. `<vendor>/core/EXECUTION.md`
-5. `<vendor>/core/WORKFLOW.md`
-6. `<vendor>/core/TESTING.md`
-7. `<vendor>/core/MEMORY.md`
-8. `<overlay>/...` (your project overlay)
+3. `<vendor>/core/REVIEW_PROTOCOL.md`
+4. `<vendor>/core/INVARIANTS.md`
+5. `<vendor>/core/EXECUTION.md`
+6. `<vendor>/core/WORKFLOW.md`
+7. `<vendor>/core/TESTING.md`
+8. `<vendor>/core/MEMORY.md`
+9. `<overlay>/...` (your project overlay)
 
-For deep reviews, also read `<vendor>/core/REVIEW_PROTOCOL.md` and your
-project's review prompts and ledgers. `<vendor>/core/BOOTSTRAP.md` describes the
-vendor/pointer flow and is only needed when the core is not inlined.
+For deep reviews, also read your project's review prompts and ledgers.
+`<vendor>/core/BOOTSTRAP.md` describes the vendor/pointer flow and is only needed
+when the core is not inlined.
 
 Most setups skip this manual read order entirely: `tools/install` inlines the
 core into the tool's native entrypoint, so it auto-loads at startup.

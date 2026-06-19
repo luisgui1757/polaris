@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Install Polaris's local CI as a git pre-push hook (run once per clone).
 #
-# The hook runs `tools/ci` before every push, mirroring the GitHub `ci` check so
-# failures are caught locally first. Bypass once with `git push --no-verify`.
+# The hook runs `make gate` before every push: strict local preflight, ruleset
+# semantics, bats, and the PowerShell drift check. Bypass once with
+# `git push --no-verify`.
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -17,10 +18,10 @@ HOOK_DIR="$REPO_ROOT/.git/hooks"
 mkdir -p "$HOOK_DIR"
 cat > "$HOOK_DIR/pre-push" <<'HOOK'
 #!/usr/bin/env bash
-# Polaris pre-push gate (installed by tools/install-hooks); mirrors the GitHub ci check.
+# Polaris pre-push gate (installed by tools/install-hooks).
 set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel)
-exec bash "$ROOT/tools/ci"
+exec make -C "$ROOT" gate
 HOOK
 chmod +x "$HOOK_DIR/pre-push"
-echo "install-hooks: installed $HOOK_DIR/pre-push -> tools/ci"
+echo "install-hooks: installed $HOOK_DIR/pre-push -> make gate"

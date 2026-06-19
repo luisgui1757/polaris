@@ -13,4 +13,6 @@ REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 source "$SCRIPT_DIR/polaris-lib.sh"
 
 printf '# Polaris Core\n'
-polaris_render_core "$REPO_ROOT/core" "$REPO_ROOT/MANIFEST.json"
+MANIFEST="$REPO_ROOT/MANIFEST.json"
+CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
+polaris_render_core "$CORE" "$MANIFEST"

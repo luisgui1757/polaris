@@ -7,6 +7,8 @@ export LC_ALL=C
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO_ROOT"
+# shellcheck source=polaris-lib.sh
+source "$SCRIPT_DIR/polaris-lib.sh"
 
 ver=$(tr -d ' \r\n' < VERSION 2>/dev/null || true)
 [[ -n "$ver" ]] || { echo "release-check: empty or missing VERSION" >&2; exit 1; }
@@ -14,6 +16,24 @@ ver=$(tr -d ' \r\n' < VERSION 2>/dev/null || true)
 if [[ ! -f CHANGELOG.md ]]; then
   echo "release-check: CHANGELOG.md missing" >&2; exit 1
 fi
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "release-check: must run inside a git working tree" >&2; exit 1
+fi
+git update-index -q --refresh
+if ! git diff --quiet; then
+  echo "release-check: working tree has unstaged changes; commit or discard them before release" >&2; exit 1
+fi
+if ! git diff --cached --quiet; then
+  echo "release-check: index has staged changes; commit or unstage them before release" >&2; exit 1
+fi
+untracked=$(git ls-files --others --exclude-standard)
+if [[ -n "$untracked" ]]; then
+  echo "release-check: untracked files present; commit, ignore, or remove them before release" >&2
+  exit 1
+fi
+commit=$(git rev-parse --verify HEAD)
+
 # Escape regex metacharacters in the version (the dots are literal, not wildcards).
 ver_re=$(printf '%s' "$ver" | sed 's/[][\.*^$/]/\\&/g')
 # Anchor on the RIGHT so a prefix like 0.1 cannot false-match a [0.1.0] heading:
@@ -22,6 +42,50 @@ if ! grep -qE "^## .*\[?${ver_re}\]?([^0-9.]|$)" CHANGELOG.md; then
   echo "release-check: CHANGELOG.md has no section for version ${ver}" >&2; exit 1
 fi
 echo "release-check: VERSION=${ver} has a CHANGELOG entry."
+
+manifest_core_dir=$(polaris_manifest_core_dir MANIFEST.json)
+sha=$(polaris_bundle_sha256 "$REPO_ROOT/$manifest_core_dir" MANIFEST.json)
+section=$(awk -v ver_re="$ver_re" '
+  /^## / {
+    if (in_section) exit
+    if ($0 ~ "^## .*\\[?" ver_re "\\]?([^0-9.]|$)") in_section = 1
+  }
+  in_section { print }
+' CHANGELOG.md)
+changelog_sha=""
+while IFS= read -r line; do
+  [[ "$line" == *bundle-sha256* ]] || continue
+  if [[ "$line" =~ ([0-9A-Fa-f]{64}) ]]; then
+    changelog_sha=$(printf '%s' "${BASH_REMATCH[1]}" | tr 'A-F' 'a-f')
+    break
+  fi
+done <<< "$section"
+if [[ -z "$changelog_sha" ]]; then
+  echo "release-check: CHANGELOG.md section for ${ver} has no bundle-sha256 entry" >&2
+  exit 1
+fi
+if [[ "$changelog_sha" != "$sha" ]]; then
+  echo "release-check: CHANGELOG.md bundle-sha256 mismatch for ${ver}" >&2
+  echo "  recorded: $changelog_sha" >&2
+  echo "  current:  $sha" >&2
+  exit 1
+fi
+echo "release-check: bundle-sha256=${sha} is recorded in CHANGELOG.md."
+
+if git rev-parse -q --verify "refs/tags/v${ver}" >/dev/null; then
+  echo "release-check: local tag v${ver} already exists" >&2; exit 1
+fi
+if git remote get-url origin >/dev/null 2>&1; then
+  if git ls-remote --exit-code --tags origin "refs/tags/v${ver}" >/dev/null 2>&1; then
+    echo "release-check: remote tag v${ver} already exists on origin" >&2; exit 1
+  else
+    rc=$?
+    if [[ "$rc" -ne 2 ]]; then
+      echo "release-check: WARNING: could not verify remote tags on origin (git ls-remote rc=$rc); remote tag state is not checkable." >&2
+    fi
+  fi
+fi
+echo "release-check: release candidate commit ${commit} for v${ver}."
 
 # A release gate runs STRICT: every linter and the regression suite must actually
 # run -- a missing tool is a failure, never a silent skip.
@@ -34,4 +98,5 @@ bash tools/ci
 # bats suite is separate and a release must not skip it).
 bash tests/run.sh
 
+echo "release-check: certified commit ${commit}."
 echo "release-check: OK -- safe to tag v${ver}."
