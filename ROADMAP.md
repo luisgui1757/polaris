@@ -59,6 +59,10 @@ ShellCheck flagged `SC2015` in `tools/polaris-lib.sh` for the
 path resolution as explicit `if` branches and adds a focused regression proving
 that a supplied core directory must still match the manifest `core_dir`.
 
+A second Ubuntu-only failure exposed Bash-version drift in `tools/status`: the
+`${path/#$HOME/~}` replacement could expand `~` back to `$HOME` on newer Bash.
+Status output now formats home-relative paths explicitly.
+
 Verification after the repair:
 
 - `bash tools/lint-shell` passed.

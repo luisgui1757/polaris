@@ -54,6 +54,8 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 - Rewrote `polaris_check_core` path resolution to avoid the `A && B || C` shell
   idiom that older CI ShellCheck versions flag, while preserving the manifest
   `core_dir` mismatch check.
+- Made `tools/status` home-relative path display deterministic across Bash
+  versions, fixing the Ubuntu-only Codex `AGENTS.override.md` status test.
 
 ## [0.1.0] - 2026-06-16
 

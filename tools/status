@@ -73,12 +73,17 @@ global_entrypoint_key_for_path() {
 }
 
 row() {
-  local path=$1 label=${2:-} state=${3:-}
+  local path=$1 label=${2:-} state=${3:-} display_path tilde="~"
   [[ -n "$state" ]] || state=$(state_of "$path")
+  display_path=$path
+  case "$path" in
+    "$HOME"/*) display_path="$tilde/${path#"$HOME/"}" ;;
+    "$HOME") display_path=$tilde ;;
+  esac
   if [[ -n "$label" ]]; then
-    printf '  %-10s %-58s %s\n' "$state" "${path/#$HOME/~}" "$label"
+    printf '  %-10s %-58s %s\n' "$state" "$display_path" "$label"
   else
-    printf '  %-10s %s\n' "$state" "${path/#$HOME/~}"
+    printf '  %-10s %s\n' "$state" "$display_path"
   fi
 }
 
