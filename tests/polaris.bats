@@ -303,6 +303,15 @@ JSON
   [[ "$output" == *"missing optional core file: core/ADAPTERS.md"* ]]
 }
 
+@test "manifest paths: core_dir argument must match the manifest" {
+  vendor="$TMP/vendor-core-arg"; mkdir -p "$vendor"
+  cp -R "$ROOT/core" "$ROOT/MANIFEST.json" "$vendor/"
+  mkdir -p "$vendor/not-core"
+  run scan "polaris_check_core '$vendor/not-core' '$vendor/MANIFEST.json'"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"core_dir argument does not match manifest core_dir 'core'"* ]]
+}
+
 @test "manifest paths: required core files cannot escape core_dir" {
   vendor="$TMP/vendor-escape"; mkdir -p "$vendor/core"
   cat > "$vendor/MANIFEST.json" <<'JSON'

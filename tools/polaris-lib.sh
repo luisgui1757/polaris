@@ -352,8 +352,16 @@ polaris_check_core() {
   polaris_check_manifest_paths "$manifest" || failed=1
   manifest_core_dir=$(polaris_manifest_core_dir "$manifest" 2>/dev/null || true)
   if [[ -n "$manifest_core_dir" ]]; then
-    expected_core_dir=$(cd "$base/$manifest_core_dir" 2>/dev/null && pwd || true)
-    actual_core_dir=$(cd "$core_dir" 2>/dev/null && pwd || true)
+    if expected_core_dir=$(cd "$base/$manifest_core_dir" 2>/dev/null && pwd); then
+      :
+    else
+      expected_core_dir=""
+    fi
+    if actual_core_dir=$(cd "$core_dir" 2>/dev/null && pwd); then
+      :
+    else
+      actual_core_dir=""
+    fi
     if [[ -n "$expected_core_dir" && -n "$actual_core_dir" && "$expected_core_dir" != "$actual_core_dir" ]]; then
       echo "polaris: core_dir argument does not match manifest core_dir '$manifest_core_dir'" >&2
       failed=1

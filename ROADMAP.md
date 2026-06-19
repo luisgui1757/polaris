@@ -51,6 +51,24 @@ fixes:
 Not run: live GitHub ruleset verification, global install, or model-dependent
 ingestion probes.
 
+## CI repair snapshot - 2026-06-19
+
+PR #1 initially failed GitHub CI on `test (ubuntu-latest)` because Ubuntu's
+ShellCheck flagged `SC2015` in `tools/polaris-lib.sh` for the
+`cd ... && pwd || true` idiom inside `polaris_check_core`. The fix rewrites that
+path resolution as explicit `if` branches and adds a focused regression proving
+that a supplied core directory must still match the manifest `core_dir`.
+
+Verification after the repair:
+
+- `bash tools/lint-shell` passed.
+- `bats --filter 'manifest paths' tests/polaris.bats` passed: 3/3.
+- `make ci` passed as local preflight.
+- `make gate` passed with the strict toolchain available on `PATH`: strict
+  preflight with schema validation, 49/49 bats tests, and PowerShell adapter
+  drift proof.
+- `git diff --check` passed.
+
 ## Now (owner actions)
 
 - **Run `make install-global` if desired** to carry the rules into every repo on

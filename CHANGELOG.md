@@ -50,6 +50,11 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
   required GitHub `ci` aggregate. `yamllint` line length is an error, not a
   warning, after wrapping the workflow lines that previously warned.
 
+### Fixed
+- Rewrote `polaris_check_core` path resolution to avoid the `A && B || C` shell
+  idiom that older CI ShellCheck versions flag, while preserving the manifest
+  `core_dir` mismatch check.
+
 ## [0.1.0] - 2026-06-16
 
 First tagged release. Pin to the tag `v0.1.0` and verify the rendered rules with:
