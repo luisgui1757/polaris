@@ -42,7 +42,7 @@ REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 source "$SCRIPT_DIR/polaris-lib.sh"
 
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/core"
+CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
 
 SCOPE="repo"
 ACTION="write"
@@ -70,51 +70,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# Render the managed block (markers + provenance header + inlined contract).
-render_block() {
-  local ver bundle sha
-  ver=$(tr -d ' \r\n' < "$REPO_ROOT/VERSION" 2>/dev/null || echo dev)
-  bundle=$(polaris_render_bundle "$CORE" "$MANIFEST")
-  sha=$(polaris_bundle_sha256 "$CORE" "$MANIFEST")
-  printf '%s\n' "<!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->"
-  printf '%s\n' "<!-- version: $ver  sha256: $sha -->"
-  printf '\n%s\n\n' "# Operating Contract"
-  printf '%s\n' "Baseline engineering rules for this project, loaded automatically. Treat them as"
-  printf '%s\n' "the floor, not the ceiling: the active task and this repository's own conventions"
-  printf '%s\n\n' "may tighten them freely, and may relax one only with an explicit, documented justification."
-  printf '%s\n' "Precedence, highest first: runtime/platform safety; the active task; this"
-  printf '%s\n\n' "repository's conventions; the rules below; then personal global defaults."
-  printf '%s\n' "$bundle"
-  printf '%s\n' "<!-- AGENT-RULES:END -->"
-}
-
-# Compose target content with the block inserted into <out>: replace an existing
-# managed block in place (collapsing any duplicate blocks to one), otherwise
-# append it, always preserving surrounding user content. Returns nonzero (and
-# leaves <out> unusable) if the target has a AGENT-RULES:BEGIN with no matching
-# AGENT-RULES:END -- writing then would silently drop the user's trailing content,
-# so the caller must refuse rather than write.
-compose_into() {
-  local target=$1 blockfile=$2 out=$3
-  if [[ -f "$target" ]] && grep -q '^<!-- AGENT-RULES:BEGIN' "$target"; then
-    awk -v bf="$blockfile" '
-      BEGIN { while ((getline line < bf) > 0) blk = blk line ORS }
-      /^<!-- AGENT-RULES:BEGIN/   { if (!done) { printf "%s", blk; done = 1 } skip = 1; next }
-      /^<!-- AGENT-RULES:END -->/ { if (skip) { skip = 0; next } }
-      skip { next }
-      { print }
-      END { if (skip) exit 3 }
-    ' "$target" > "$out" || return $?
-  else
-    : > "$out"
-    if [[ -f "$target" ]]; then
-      cat "$target" > "$out"
-      printf '\n' >> "$out"
-    fi
-    cat "$blockfile" >> "$out"
-  fi
-}
-
 # Remove the managed block (markers included) from <target> into <out>,
 # preserving all surrounding user content. Nonzero on an unterminated block.
 remove_block() {
@@ -130,21 +85,14 @@ remove_block() {
 
 targets() {
   if [[ "$SCOPE" == repo ]]; then
-    printf '%s\n' \
-      "$TARGET_DIR/AGENTS.md" \
-      "$TARGET_DIR/CLAUDE.md" \
-      "$TARGET_DIR/.github/copilot-instructions.md"
+    polaris_repo_adapter_targets "$TARGET_DIR"
   else
-    printf '%s\n' \
-      "${CODEX_HOME:-$HOME/.codex}/AGENTS.md" \
-      "$HOME/.claude/CLAUDE.md" \
-      "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/AGENTS.md" \
-      "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/AGENTS.md"
+    polaris_global_adapter_targets
   fi
 }
 
 blockfile=$(mktemp)
-render_block > "$blockfile"
+polaris_render_managed_block "$CORE" "$MANIFEST" "$REPO_ROOT/VERSION" > "$blockfile"
 trap 'rm -f "$blockfile"' EXIT
 
 status=0
@@ -154,7 +102,7 @@ while IFS= read -r t; do
     check)
       if [[ -f "$t" ]] && grep -q '^<!-- AGENT-RULES:BEGIN' "$t"; then
         out=$(mktemp)
-        if compose_into "$t" "$blockfile" "$out"; then
+        if polaris_compose_adapter "$t" "$blockfile" "$out"; then
           if cmp -s "$t" "$out"; then echo "ok:      $t"; else echo "DRIFT:   $t"; status=1; fi
         else
           echo "MALFORMED: $t (AGENT-RULES:BEGIN without AGENT-RULES:END)"; status=1
@@ -188,7 +136,7 @@ while IFS= read -r t; do
       ;;
     dry)
       out=$(mktemp)
-      if compose_into "$t" "$blockfile" "$out"; then
+      if polaris_compose_adapter "$t" "$blockfile" "$out"; then
         if [[ ! -f "$t" ]] || ! cmp -s "$t" "$out"; then echo "would write: $t"; else echo "unchanged:   $t"; fi
       else
         echo "would REFUSE: $t (AGENT-RULES:BEGIN without AGENT-RULES:END -- fix markers)"; status=1
@@ -201,7 +149,7 @@ while IFS= read -r t; do
       if ! out=$(mktemp "$(dirname "$t")/.polaris.XXXXXX"); then
         echo "install: cannot create temp file in $(dirname "$t")" >&2; status=1; continue
       fi
-      if compose_into "$t" "$blockfile" "$out"; then
+      if polaris_compose_adapter "$t" "$blockfile" "$out"; then
         if [[ -f "$t" ]] && cmp -s "$t" "$out"; then
           echo "unchanged: $t"; rm -f "$out"
         else
@@ -219,6 +167,12 @@ done < <(targets)
 
 if [[ "$SCOPE" == global ]]; then
   echo
+  if [[ -f "${CODEX_HOME:-$HOME/.codex}/AGENTS.override.md" ]]; then
+    echo "warning: Codex will load ${CODEX_HOME:-$HOME/.codex}/AGENTS.override.md"
+    echo "         before ${CODEX_HOME:-$HOME/.codex}/AGENTS.md; Polaris is installed"
+    echo "         but may be shadowed for Codex until the override is reconciled."
+    echo
+  fi
   echo "note: GitHub Copilot has no global file entrypoint. Set user-wide rules"
   echo "      manually: VS Code 'Chat: New Instructions File -> New (User)' with"
   echo "      applyTo: '**', and/or github.com Copilot personal instructions."

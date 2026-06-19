@@ -28,7 +28,8 @@ bundle.
 ## Changing rules
 
 - Edit `core/*.md`, then `make install` (regenerate adapters with the new version
-  stamp) and `make ci` (leak scan + render + drift) — both must pass.
+  stamp) and `make ci` (local preflight: leak scan, render, drift, rulesets,
+  lint, ShellCheck) — both must pass.
 - Keep `core/` free of project names, private paths, and machine-local state;
   `make check` enforces this (see `docs/THREAT_MODEL.md`).
 - Update `CHANGELOG.md` for any change to the rules or the contract; consumers
@@ -48,14 +49,17 @@ bundle.
 ## Local setup
 
 ```bash
-make install-hooks   # pre-push gate (fast local subset of CI)
+make install-hooks   # pre-push hook that runs the strongest local gate
+make ci              # fast local preflight
+make gate            # strict local gate: preflight + bats + pwsh drift check
 make test            # bats tooling suite (incl. bash/pwsh byte-identity parity)
-make ci              # local gate: privacy scan + render + drift + lint + shellcheck
 ```
 
-The required CI gate runs more than local `make ci`: it sets `POLARIS_STRICT=1`
-(a missing linter/`bats`/`pwsh` fails instead of skipping), runs `make test` on
-Linux + macOS, and runs the PowerShell installer on a native Windows (amd64) job.
+The required GitHub `ci` context is stronger than local preflight: it runs Linux
++ macOS preflight and tests, strict lint with all linters installed, and the
+PowerShell installer on a native Windows (amd64) job. `make gate` is the closest
+local equivalent and requires the strict local toolchain, including `pwsh`; it
+still cannot prove native Windows behavior on a non-Windows host.
 
 ## Credits
 

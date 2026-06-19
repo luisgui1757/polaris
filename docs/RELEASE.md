@@ -11,9 +11,13 @@ traceable.
    `bash -c 'source tools/polaris-lib.sh; polaris_bundle_sha256 core MANIFEST.json'`.
 3. Bump `VERSION` to `x.y.z`.
 4. `make install` — regenerate adapters with the new version stamp.
-5. `make ci` — leak scan + render smoke + adapter drift.
-6. `make release-check` — asserts `VERSION`, the `CHANGELOG` entry, the adapters,
-   and the gate all agree.
+5. `make ci` — local preflight: leak scan, render smoke, adapter drift,
+   ruleset semantics, lint, and ShellCheck.
+6. `make release-check` — requires a clean index/worktree with no untracked
+   files, rejects an already-existing `v$VERSION` tag locally or on `origin`
+   when the remote is checkable, verifies the exact current `bundle-sha256` in
+   the matching `CHANGELOG.md` section, and prints the certified commit after
+   the adapters, CI gate, and bats suite pass.
 7. Tag and push. **Sign it** (`git tag -s`) if you have a signing key configured
    — recommended; otherwise an annotated tag (`git tag -a`) is acceptable:
    ```bash
@@ -28,3 +32,6 @@ A consumer then pins the tag and verifies its vendored copy:
 ```bash
 tools/verify-vendor <vendor-dir> <bundle-sha256>
 ```
+
+Use `tools/verify-vendor --structure-only <vendor-dir>` only for an explicit
+non-integrity audit; normal vendor verification requires the pinned hash.

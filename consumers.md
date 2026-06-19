@@ -19,8 +19,12 @@ checkout pinned to the same commit SHA:
 path/to/polaris/tools/verify-vendor .agent-rules <expected-bundle-sha256>
 ```
 
-It recomputes the bundle hash of your vendored `core/` + `MANIFEST.json` and fails
-if the tree is incomplete or does not match the pinned bundle. (`VERSION` is
+It recomputes the bundle hash of your vendored `core/` + `MANIFEST.json` and
+fails if the tree is incomplete, the manifest points outside its contained core
+layout, optional core files are missing, or the rendered bundle does not match
+the pinned hash. The expected hash is required by default; use
+`path/to/polaris/tools/verify-vendor --structure-only .agent-rules` only when
+you deliberately want a structure check without integrity proof. (`VERSION` is
 optional metadata and is not part of the hash.)
 
 Consumers are listed without exposing private project details. Add a row when a

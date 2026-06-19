@@ -55,9 +55,12 @@ model for an author exfiltrating their own secrets. Failure modes:
   (public by definition).
 - **Fail-closed.** An unreadable path or a grep error fails the scan rather than
   reading as clean.
-- **Integrity hash.** Every generated block carries a `bundle-sha256`;
-  `tools/status` and `tools/verify-vendor` recompute it and compare, so a
-  consumer can confirm exactly which rendered rules it has.
+- **Integrity hash and byte comparison.** Every generated block carries a
+  `bundle-sha256`. `tools/status` recomposes the expected adapter body and
+  compares the whole managed block, so a tampered body with a current header is
+  still reported as stale. `tools/verify-vendor` recomputes the vendored bundle
+  hash and requires the pinned expected hash by default, so a consumer can prove
+  a vendored tree matches the released rules.
 
 ## What is NOT protected (residual risk — read this)
 
@@ -85,7 +88,9 @@ model for an author exfiltrating their own secrets. Failure modes:
 
 ## Operating rules
 
-- Run `make ci` before every push; `make install-hooks` makes it automatic.
+- Run `make ci` before ordinary local checks. For push-time proof, run
+  `make gate`; `make install-hooks` makes that strict gate automatic before
+  every push.
 - Add a term to the local denylist the moment a new private project starts —
   before you might mention it.
 - Never commit the local denylist; never weaken redaction to print a private

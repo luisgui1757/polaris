@@ -23,7 +23,9 @@ the mode.
 ## REVIEW
 
 - Default read-only: read files and run non-mutating inspection commands.
-- Produce findings (the deep-review protocol defines their shape).
+- Lead with findings. Each finding includes severity, exact location, wrong
+  behavior, proof or reproduction, source of truth, multi-location check,
+  recommended fix, and confidence.
 - Edit only when the task explicitly authorizes review artifacts.
 
 ## REPORT-ONLY

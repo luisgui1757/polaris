@@ -3,8 +3,8 @@
 #
 # For each entrypoint (repo-local and per-user/global): is it present, does it
 # carry the managed block, and does that block match the CURRENTLY rendered
-# bundle (current / STALE / no-block / absent)? Plus which CLI binaries are on
-# PATH. Read-only. Usage: tools/status [--target DIR]
+# bundle (current / STALE / MALFORMED / no-block / absent / overridden)? Plus
+# which CLI binaries are on PATH. Read-only. Usage: tools/status [--target DIR]
 set -euo pipefail
 export LC_ALL=C
 
@@ -13,7 +13,8 @@ REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 # shellcheck source=polaris-lib.sh
 source "$SCRIPT_DIR/polaris-lib.sh"
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/core"
+CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
+METADATA="$REPO_ROOT/templates/adapters/tool-metadata.tsv"
 
 TARGET_DIR="$REPO_ROOT"
 case "${1:-}" in
@@ -23,35 +24,100 @@ esac
 
 ver=$(tr -d ' \r\n' < "$REPO_ROOT/VERSION" 2>/dev/null || echo dev)
 sha=$(polaris_bundle_sha256 "$CORE" "$MANIFEST")
+blockfile=$(mktemp)
+polaris_render_managed_block "$CORE" "$MANIFEST" "$REPO_ROOT/VERSION" > "$blockfile"
+trap 'rm -f "$blockfile"' EXIT
 
 state_of() {
-  local path=$1 got
+  local path=$1 out state
   if [[ ! -e "$path" ]]; then printf 'absent'; return; fi
   if ! grep -q '^<!-- AGENT-RULES:BEGIN' "$path" 2>/dev/null; then printf 'no-block'; return; fi
-  # Read the sha only from the generated header line, not anywhere a user might
-  # have written a 'sha256:' string of their own.
-  got=$(grep -m1 '^<!-- version:' "$path" 2>/dev/null \
-        | sed -n 's/.*sha256: \([0-9a-f][0-9a-f]*\).*/\1/p')
-  [[ "$got" == "$sha" ]] && printf 'current' || printf 'STALE'
+  out=$(mktemp)
+  if polaris_compose_adapter "$path" "$blockfile" "$out"; then
+    if cmp -s "$path" "$out"; then state=current; else state=STALE; fi
+  else
+    state=MALFORMED
+  fi
+  rm -f "$out"
+  printf '%s' "$state"
 }
-row() { printf '  %-9s %s\n' "$(state_of "$1")" "${1/#$HOME/~}"; }
+read_metadata() {
+  [[ -f "$METADATA" ]] || { echo "status: missing adapter metadata: $METADATA" >&2; exit 1; }
+  awk -F '\t' 'NF && $1 !~ /^#/ { print }' "$METADATA"
+}
+
+metadata_label() {
+  local scope=$1 key=$2 labels=() joined="" label
+  local _slug display _binary repo_entrypoint global_entrypoint _imports _install_scope _evidence_status _evidence_date _evidence_source
+  while IFS=$'\t' read -r _slug display _binary repo_entrypoint global_entrypoint _imports _install_scope _evidence_status _evidence_date _evidence_source; do
+    case "$scope" in
+      repo) [[ "$repo_entrypoint" == "$key" ]] && labels+=("$display") ;;
+      global) [[ "$global_entrypoint" == "$key" ]] && labels+=("$display") ;;
+    esac
+  done < <(read_metadata)
+  for label in ${labels[@]+"${labels[@]}"}; do
+    if [[ -n "$joined" ]]; then joined="$joined, $label"; else joined=$label; fi
+  done
+  printf '%s' "$joined"
+}
+
+global_entrypoint_key_for_path() {
+  local path=$1 tilde="~"
+  case "$path" in
+    "${CODEX_HOME:-$HOME/.codex}/AGENTS.md") printf '%s\n' "\${CODEX_HOME:-$tilde/.codex}/AGENTS.md" ;;
+    "$HOME/.claude/CLAUDE.md") printf '%s\n' "$tilde/.claude/CLAUDE.md" ;;
+    "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/AGENTS.md") printf '%s\n' "$tilde/.config/opencode/AGENTS.md" ;;
+    "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/AGENTS.md") printf '%s\n' "\${PI_CODING_AGENT_DIR:-$tilde/.pi/agent}/AGENTS.md" ;;
+    *) printf '%s\n' "$path" ;;
+  esac
+}
+
+row() {
+  local path=$1 label=${2:-} state=${3:-}
+  [[ -n "$state" ]] || state=$(state_of "$path")
+  if [[ -n "$label" ]]; then
+    printf '  %-10s %-58s %s\n' "$state" "${path/#$HOME/~}" "$label"
+  else
+    printf '  %-10s %s\n' "$state" "${path/#$HOME/~}"
+  fi
+}
+
+repo_row() {
+  local target=$1 rel
+  rel=${target#"$TARGET_DIR"/}
+  row "$target" "$(metadata_label repo "$rel")"
+}
+
+global_row() {
+  local target=$1 key label state="" codex_agents codex_override
+  key=$(global_entrypoint_key_for_path "$target")
+  label=$(metadata_label global "$key")
+  codex_agents="${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
+  codex_override="${CODEX_HOME:-$HOME/.codex}/AGENTS.override.md"
+  if [[ "$target" == "$codex_agents" && -f "$codex_override" ]]; then
+    state=overridden
+    label="$label (AGENTS.override.md takes precedence)"
+  fi
+  row "$target" "$label" "$state"
+}
+
+cli_binaries() {
+  local _slug _display binary _repo_entrypoint _global_entrypoint _imports _install_scope _evidence_status _evidence_date _evidence_source
+  while IFS=$'\t' read -r _slug _display binary _repo_entrypoint _global_entrypoint _imports _install_scope _evidence_status _evidence_date _evidence_source; do
+    [[ -n "$binary" && "$binary" != "-" ]] || continue
+    if command -v "$binary" >/dev/null 2>&1; then printf ' %s=yes' "$binary"; else printf ' %s=no' "$binary"; fi
+  done < <(read_metadata)
+}
 
 echo "polaris status -- v$ver, current bundle ${sha:0:12}"
 echo
 echo "repo ($TARGET_DIR):"
-row "$TARGET_DIR/AGENTS.md"
-row "$TARGET_DIR/CLAUDE.md"
-row "$TARGET_DIR/.github/copilot-instructions.md"
+while IFS= read -r t; do repo_row "$t"; done < <(polaris_repo_adapter_targets "$TARGET_DIR")
 echo
 echo "global (per-user):"
-row "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
-row "$HOME/.claude/CLAUDE.md"
-row "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/AGENTS.md"
-row "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/AGENTS.md"
+while IFS= read -r t; do global_row "$t"; done < <(polaris_global_adapter_targets)
 echo
 printf 'CLI binaries on PATH:'
-for b in claude codex opencode pi; do
-  if command -v "$b" >/dev/null 2>&1; then printf ' %s=yes' "$b"; else printf ' %s=no' "$b"; fi
-done
+cli_binaries
 echo
 echo "(Copilot has no global file -- set it in VS Code / github.com; see docs/tool-ingestion.md)"

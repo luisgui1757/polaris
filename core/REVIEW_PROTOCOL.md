@@ -1,10 +1,13 @@
-# Polaris Review Protocol
+# Review Protocol
 
-Reviews are evidence-first.
+Reviews are evidence-first. Apply this protocol whenever REVIEW mode is active,
+including generated installs that inline the core contract.
 
 ## Before A Review
 
-- Read the repository entrypoint, Polaris core, and repository overlay.
+- Read the active repository entrypoint and repository overlay. If the repo uses
+  a vendor or pointer setup instead of an inlined generated entrypoint, read the
+  vendored core files named by its manifest.
 - Read the requested review prompt and any local ledgers or rejected-finding
   lists.
 - Re-validate prior open findings before hunting for new ones.
@@ -21,6 +24,9 @@ Every finding should include:
 - Multi-location check.
 - Recommended fix.
 - Confidence.
+
+Lead with material findings, ordered by severity. If there are no material
+findings, say so directly and name any test or verification gaps that remain.
 
 ## Ledgers
 

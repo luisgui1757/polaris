@@ -3,14 +3,18 @@
 Polaris works by inlining its rules into the file each AI CLI already auto-loads
 at startup. This is the durable record of *which* file, *where* globally, and the
 per-tool gotchas — kept OUT of the injected bundle to protect the token budget.
+The machine-readable source for the supported-tool matrix is
+[`templates/adapters/tool-metadata.tsv`](../templates/adapters/tool-metadata.tsv);
+installer/status/tests validate against that metadata so docs and tooling do not
+silently drift.
 
-| Tool | Repo-local (auto-loaded) | Per-user / global | `@import`? |
-| --- | --- | --- | --- |
-| Claude Code | `CLAUDE.md`, `.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | yes |
-| Codex | `AGENTS.md` (git root → cwd) | `$CODEX_HOME/AGENTS.md` (`~/.codex`) | no |
-| GitHub Copilot | `.github/copilot-instructions.md` (+ `AGENTS.md` in VS Code) | none (UI only) | no |
-| opencode | `AGENTS.md` | `~/.config/opencode/AGENTS.md` | no |
-| pi | `AGENTS.md` | `~/.pi/agent/AGENTS.md` (`$PI_CODING_AGENT_DIR`) | no |
+| Tool | Repo-local (auto-loaded) | Per-user / global | `@import`? | Evidence status |
+| --- | --- | --- | --- | --- |
+| Claude Code | `CLAUDE.md`, `.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | yes | live-verified 2026-06-18 |
+| Codex | `AGENTS.md` (project root -> cwd) | `$CODEX_HOME/AGENTS.md` (`~/.codex`) | no | live-verified 2026-06-18 |
+| GitHub Copilot | `.github/copilot-instructions.md` and agent `AGENTS.md` | none (UI/profile only) | no | docs-confirmed 2026-06-18 |
+| opencode | `AGENTS.md` | `~/.config/opencode/AGENTS.md` | no | docs-confirmed 2026-06-18 |
+| Pi CLI | `AGENTS.md` (or `CLAUDE.md`) | `~/.pi/agent/AGENTS.md` (`$PI_CODING_AGENT_DIR`) | no | local-package-confirmed 2026-06-18 |
 
 All five inject their entrypoint into context at startup with **no tool call**.
 Polaris **inlines** (does not point) because four of the five have no import
@@ -25,10 +29,14 @@ Only ancestor `CLAUDE.md` files load at launch; nested-subdir ones load on
 demand. The Agent SDK does not load `CLAUDE.md` unless `settingSources` includes
 `'project'`.
 
-**Codex** merges global `~/.codex/AGENTS.md` first, then project root → cwd. The
-default cap is 32 KiB (`project_doc_max_bytes`) and content past the budget is
-silently truncated — keep the bundle small. Some older builds did not load the
-global file; current builds do. `CODEX_HOME` overrides `~/.codex`.
+**Codex** reads global guidance from `AGENTS.override.md` or `AGENTS.md` under
+`CODEX_HOME` (`~/.codex` by default), then walks from project root to cwd and
+uses at most one instruction file per directory. `AGENTS.override.md` takes
+precedence over `AGENTS.md`; configured fallback names come after `AGENTS.md`.
+`tools/install --global` writes `AGENTS.md` and warns if an existing
+`AGENTS.override.md` would shadow it; `tools/status` reports that state as
+`overridden`. The default cap is 32 KiB (`project_doc_max_bytes`) and content
+past the budget is silently truncated — keep the bundle small.
 
 **GitHub Copilot** has three surfaces with different scopes:
 `.github/copilot-instructions.md` works everywhere (web, VS Code, coding agent);
@@ -43,9 +51,10 @@ via the `opencode.json` `instructions` array (globs + remote URLs) — but a slo
 remote URL delays startup, so avoid remote instructions. Global lives under
 `~/.config/opencode/`.
 
-**pi** loads the FIRST of `AGENTS.md` > `AGENTS.MD` > `CLAUDE.md` > `CLAUDE.MD`
-per directory, walking cwd → root plus `~/.pi/agent`. No import syntax. The
-global dir is overridable via `PI_CODING_AGENT_DIR`.
+**Pi CLI** loads `AGENTS.md` (or `CLAUDE.md`) at startup from its global config
+directory, parent directories, and the current directory. No import syntax. The
+global dir is overridable via `PI_CODING_AGENT_DIR`, and `--no-context-files`
+disables context-file discovery.
 
 ## Proving it loaded (manual probe)
 
@@ -75,10 +84,15 @@ Copilot has no global dotfile. To carry the rules into every workspace:
 There is no stable file path to automate either reliably (the VS Code location is
 profile- and edition-specific), so this stays a documented manual step.
 
-## Verified (local) versions
+## Evidence ledger
 
-Point-in-time snapshot, verified on the author's machine as of 2026-06-12:
-Claude Code 2.1.x, Codex CLI 0.137.x, pi 0.78.x. Treat this as a dated
-confirmation, not a guarantee — CLIs move. opencode was not installed locally, so
-its `AGENTS.md` / `~/.config/opencode` behavior is from its docs — re-confirm with
-`make status` once it's installed.
+Point-in-time snapshot as of 2026-06-18. Treat these as dated confirmations, not
+permanent guarantees — CLIs move.
+
+| Tool | Status | Evidence |
+| --- | --- | --- |
+| Claude Code | live-verified | Local `claude --version` reported 2.1.172. Official docs confirm `CLAUDE.md`, `~/.claude/CLAUDE.md`, project `.claude/CLAUDE.md`, import syntax, and startup loading: <https://code.claude.com/docs/en/memory>. |
+| Codex | live-verified | Local `codex --version` reported 0.140.0. Official docs confirm global/project `AGENTS.md`, `CODEX_HOME`, `AGENTS.override.md`, and `project_doc_max_bytes`: <https://developers.openai.com/codex/guides/agents-md>. |
+| GitHub Copilot | docs-confirmed | GitHub docs confirm `.github/copilot-instructions.md`, repository `AGENTS.md` agent instructions, automatic use, and no file-based global install path: <https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions>. |
+| opencode | docs-confirmed | OpenCode docs confirm `AGENTS.md`, `~/.config/opencode/AGENTS.md`, Claude fallback behavior, precedence, and `opencode.json` instructions; the CLI was not installed locally: <https://opencode.ai/docs/rules>. |
+| Pi CLI | local-package-confirmed | Local `pi --version` reported 0.78.1. The installed package README confirms startup loading of `AGENTS.md` or `CLAUDE.md`, global `~/.pi/agent/AGENTS.md`, parent/current-directory loading, `--no-context-files`, and `PI_CODING_AGENT_DIR`. |

@@ -5,9 +5,10 @@
 # bundle -- not a partial or tampered copy.
 #
 # Usage:
-#   tools/verify-vendor <vendor-dir> [expected-bundle-sha256]
+#   tools/verify-vendor <vendor-dir> <expected-bundle-sha256>
+#   tools/verify-vendor --structure-only <vendor-dir>
 #
-# Exit 0 if structurally valid (and, when given, the bundle hash matches).
+# Exit 0 only when integrity is proven, unless --structure-only is explicit.
 set -euo pipefail
 export LC_ALL=C
 
@@ -15,12 +16,41 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=polaris-lib.sh
 source "$SCRIPT_DIR/polaris-lib.sh"
 
-dir=${1:?usage: tools/verify-vendor <vendor-dir> [expected-bundle-sha256]}
+structure_only=0
+case "${1:-}" in
+  --structure-only) structure_only=1; shift ;;
+  -h|--help)
+    sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+esac
+
+if [[ "$structure_only" -eq 0 && $# -ne 2 ]]; then
+  echo "usage: tools/verify-vendor <vendor-dir> <expected-bundle-sha256>" >&2
+  echo "       tools/verify-vendor --structure-only <vendor-dir>" >&2
+  exit 2
+fi
+if [[ "$structure_only" -eq 1 && $# -ne 1 ]]; then
+  echo "usage: tools/verify-vendor --structure-only <vendor-dir>" >&2
+  exit 2
+fi
+
+dir=$1
 dir=$(cd "$dir" && pwd)
 manifest="$dir/MANIFEST.json"
-core="$dir/core"
+expected=${2:-}
+
+if [[ "$structure_only" -eq 0 ]]; then
+  if [[ ! "$expected" =~ ^[0-9A-Fa-f]{64}$ ]]; then
+    echo "verify-vendor: expected bundle sha256 must be exactly 64 hex characters." >&2
+    exit 2
+  fi
+  expected=$(printf '%s' "$expected" | tr 'A-F' 'a-f')
+fi
 
 [[ -f "$manifest" ]] || { echo "verify-vendor: missing $manifest" >&2; exit 1; }
+manifest_core_dir=$(polaris_manifest_core_dir "$manifest")
+core="$dir/$manifest_core_dir"
 [[ -d "$core" ]]     || { echo "verify-vendor: missing $core" >&2; exit 1; }
 
 # Structure + required files + generic-term cleanliness (the vendor's own private
@@ -38,15 +68,13 @@ ver="?"
 [[ -f "$dir/VERSION" ]] && ver=$(tr -d ' \r\n' < "$dir/VERSION")
 echo "verify-vendor: $dir  version=$ver  bundle-sha256=$sha"
 
-if [[ -n "${2:-}" ]]; then
-  if [[ "$2" == "$sha" ]]; then
+if [[ "$structure_only" -eq 0 ]]; then
+  if [[ "$expected" == "$sha" ]]; then
     echo "verify-vendor: bundle MATCHES the expected hash."
   else
-    echo "verify-vendor: bundle MISMATCH (expected $2)" >&2
+    echo "verify-vendor: bundle MISMATCH (expected $expected)" >&2
     exit 1
   fi
 else
-  echo "verify-vendor: WARNING: structure verified but INTEGRITY NOT PROVEN -- no" >&2
-  echo "  expected bundle sha256 given. Pass the pinned hash as the 2nd argument to" >&2
-  echo "  confirm the vendored copy is a known, unmodified Polaris bundle." >&2
+  echo "verify-vendor: STRUCTURE ONLY -- integrity was deliberately not proven." >&2
 fi

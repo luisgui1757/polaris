@@ -3,7 +3,7 @@
 > `README.md` and `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
 
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
-<!-- version: 0.1.0  sha256: 4b85911c73f793da9b812ba6c83eb07933b267a155c1ca0391fc3071ac4b3a5c -->
+<!-- version: 0.1.0  sha256: d21a945453840d447c4903813a7cb55bfe26dd995b1cde32d22668b16bcab0f5 -->
 
 # Operating Contract
 
@@ -39,7 +39,9 @@ the mode.
 ### REVIEW
 
 - Default read-only: read files and run non-mutating inspection commands.
-- Produce findings (the deep-review protocol defines their shape).
+- Lead with findings. Each finding includes severity, exact location, wrong
+  behavior, proof or reproduction, source of truth, multi-location check,
+  recommended fix, and confidence.
 - Edit only when the task explicitly authorizes review artifacts.
 
 ### REPORT-ONLY
@@ -59,6 +61,43 @@ the mode.
 - Same authority as FIX, extended to larger feature delivery, generated
   artifacts, migrations, or packaging when explicitly requested.
 - Protected files still require explicit task scope or user authorization.
+
+## Review Protocol
+
+Reviews are evidence-first. Apply this protocol whenever REVIEW mode is active,
+including generated installs that inline the core contract.
+
+### Before A Review
+
+- Read the active repository entrypoint and repository overlay. If the repo uses
+  a vendor or pointer setup instead of an inlined generated entrypoint, read the
+  vendored core files named by its manifest.
+- Read the requested review prompt and any local ledgers or rejected-finding
+  lists.
+- Re-validate prior open findings before hunting for new ones.
+
+### Findings
+
+Every finding should include:
+
+- Severity.
+- Exact location.
+- Concise statement of wrong behavior.
+- Reproduction, trace, or proof.
+- Source of truth.
+- Multi-location check.
+- Recommended fix.
+- Confidence.
+
+Lead with material findings, ordered by severity. If there are no material
+findings, say so directly and name any test or verification gaps that remain.
+
+### Ledgers
+
+- Preserve history. Append or change status with justification.
+- Record false alarms in the rejected-finding location defined by the
+  repository overlay.
+- Accepted bugs need tests and documentation updates.
 
 ## Invariants
 
