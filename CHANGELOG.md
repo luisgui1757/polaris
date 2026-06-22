@@ -23,6 +23,11 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
   and hash-required vendor verification guidance.
 
 ### Changed
+- The execution contract now explicitly sets the delivery bar as the
+  uncompromised ubiquitous canonical gold-standard and rejects unapproved
+  workarounds, shortcuts, fake-green changes, test deletions, checker
+  suppressions, hardcoded results, partial implementations, degraded fallbacks,
+  and undocumented temporary compromises as finished work.
 - `tools/status` now compares the full managed block against freshly composed
   adapter output instead of trusting only the stamped header hash; tampered
   bodies now report stale. Global Codex status now reports `overridden` when an
