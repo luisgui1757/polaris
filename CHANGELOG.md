@@ -5,6 +5,16 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-22
+
+Pin to the tag `v0.1.1` and verify the rendered rules with:
+
+**bundle-sha256:** `19c74a2a3c056c8895f2ecb1dd112ffd6a396f3371210149cd9e1c618176751a`
+
+```bash
+tools/verify-vendor <vendored-dir> 19c74a2a3c056c8895f2ecb1dd112ffd6a396f3371210149cd9e1c618176751a
+```
+
 ### Added
 - `core/REVIEW_PROTOCOL.md` is now part of the required injected bundle, with
   generated-adapter coverage proving REVIEW mode has no dangling protocol
