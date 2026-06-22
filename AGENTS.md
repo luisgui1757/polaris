@@ -3,7 +3,7 @@
 > `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
 
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
-<!-- version: 0.1.0  sha256: d21a945453840d447c4903813a7cb55bfe26dd995b1cde32d22668b16bcab0f5 -->
+<!-- version: 0.1.0  sha256: 19c74a2a3c056c8895f2ecb1dd112ffd6a396f3371210149cd9e1c618176751a -->
 
 # Operating Contract
 
@@ -159,6 +159,21 @@ How to behave while doing the work — mode-independent reasoning discipline.
   genuinely unclear, stop, name exactly what is confusing, and ask.
 - Do not change or remove code or comments you do not understand well enough to
   explain.
+
+### No Unapproved Compromises
+
+- Treat the delivery bar as the uncompromised ubiquitous canonical gold-standard
+  for the task's real constraints. A change is not complete because it is
+  convenient, green locally, easy to explain, or superficially acceptable; it is
+  complete only when it preserves the system's intended semantics and is verified
+  against the relevant source of truth.
+- Do not ship workarounds, shortcuts, fake-green changes, test deletions,
+  checker suppressions, hardcoded results, partial implementations, degraded
+  fallbacks, or "good enough for now" fixes as finished work.
+- If the uncompromised solution is blocked, stop and surface the blocker, the
+  evidence, and the canonical path forward. Use a temporary compromise only when
+  the user explicitly authorizes it, and document its limits and follow-up in the
+  same change.
 
 ### Simplicity First
 

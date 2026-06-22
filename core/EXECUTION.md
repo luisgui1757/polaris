@@ -13,6 +13,21 @@ How to behave while doing the work — mode-independent reasoning discipline.
 - Do not change or remove code or comments you do not understand well enough to
   explain.
 
+## No Unapproved Compromises
+
+- Treat the delivery bar as the uncompromised ubiquitous canonical gold-standard
+  for the task's real constraints. A change is not complete because it is
+  convenient, green locally, easy to explain, or superficially acceptable; it is
+  complete only when it preserves the system's intended semantics and is verified
+  against the relevant source of truth.
+- Do not ship workarounds, shortcuts, fake-green changes, test deletions,
+  checker suppressions, hardcoded results, partial implementations, degraded
+  fallbacks, or "good enough for now" fixes as finished work.
+- If the uncompromised solution is blocked, stop and surface the blocker, the
+  evidence, and the canonical path forward. Use a temporary compromise only when
+  the user explicitly authorizes it, and document its limits and follow-up in the
+  same change.
+
 ## Simplicity First
 
 - Write the minimum that solves the actual problem. Nothing speculative.
