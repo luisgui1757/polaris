@@ -128,15 +128,17 @@ Status: fixed in this branch. `tools/release-check` now requires a clean
 index/worktree with no untracked files, rejects existing local/checkable remote
 tags, verifies the exact current `bundle-sha256` in the matching changelog
 section by exact bracketed `x.y.z` heading outside fenced blocks, rejects
-duplicate release sections or bundle-hash entries, prints the certified commit,
-and `polaris_bundle_sha256` fails closed without relying on caller `pipefail`.
+duplicate release sections or bundle-hash tokens, fails closed when `origin` tag
+state cannot be checked, prints the certified commit, and `polaris_bundle_sha256`
+fails closed without relying on caller `pipefail`.
 
 Resolved gap: `make release-check` previously could certify a release without
 proving the exact published `bundle-sha256`, without proving the tree is clean,
 and while the documented hash helper could fail open outside `pipefail`. A later
 audit also found the changelog section match was too loose: `VERSION=1.2.3`
 could match a `[11.2.3]` heading, non-`x.y.z` version tokens were not rejected,
-and ambiguous duplicate sections or bundle-hash entries were not rejected.
+ambiguous duplicate sections or bundle-hash tokens were not rejected, and
+uncheckable remote tag state still allowed "safe to tag" certification.
 
 Historical evidence:
 
@@ -153,16 +155,18 @@ Historical evidence:
   `VERSION=1.2.3` against `## [11.2.3]`.
 - Audit reproduction: release-check accepted non-`x.y.z` `VERSION` values,
   fenced fake headings, duplicate release sections, and duplicate bundle hashes.
+- Audit reproduction: nested fenced blocks could expose fake headings, duplicate
+  hashes on one line could pass, and `git ls-remote` uncertainty only warned.
 
 Implemented solution:
 
 - Make `release-check` compute the current bundle hash, parse the matching
   changelog version section by exact bracketed `x.y.z` heading outside fenced
-  blocks, and fail unless exactly one matching hash appears there.
+  blocks, and fail unless exactly one matching hash token appears there.
 - Make `release-check` fail unless the index and working tree are clean and no
   non-ignored untracked files exist.
 - Print the exact commit SHA being certified and fail if `v$VERSION` already
-  exists locally or remotely.
+  exists locally or remotely, or if remote tag state cannot be checked.
 - Make `polaris_bundle_sha256` fail closed internally, independent of caller
   shell options.
 
@@ -172,6 +176,8 @@ Acceptance criteria:
 - A sibling heading such as `[11.2.3]` cannot satisfy `VERSION=1.2.3`.
 - Non-`x.y.z` versions, fenced fake headings, duplicate release sections, and
   duplicate bundle-hash entries fail.
+- Nested fenced headings, same-line duplicate hashes, and uncheckable remote tag
+  state fail.
 - Dirty, staged, or untracked release trees fail.
 - An invalid manifest never produces a successful SHA helper result.
 

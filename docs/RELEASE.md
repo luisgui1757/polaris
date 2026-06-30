@@ -14,10 +14,10 @@ traceable.
 5. `make ci` — local preflight: leak scan, render smoke, adapter drift,
    ruleset semantics, lint, and ShellCheck.
 6. `make release-check` — requires a clean index/worktree with no untracked
-   files, rejects an already-existing `v$VERSION` tag locally or on `origin`
-   when the remote is checkable, verifies the exact current `bundle-sha256` in
-   the matching `CHANGELOG.md` section, and prints the certified commit after
-   the adapters, CI gate, and bats suite pass.
+   files, rejects an already-existing `v$VERSION` tag locally or on `origin`,
+   fails if the remote tag state cannot be checked, verifies the exact current
+   `bundle-sha256` in the matching `CHANGELOG.md` section, and prints the
+   certified commit after the adapters, CI gate, and bats suite pass.
 7. Tag and push. **Sign it** (`git tag -s`) if you have a signing key configured
    — recommended; otherwise an annotated tag (`git tag -a`) is acceptable:
    ```bash

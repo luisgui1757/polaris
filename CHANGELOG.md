@@ -22,7 +22,8 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 - `tools/release-check` now validates `VERSION` as `x.y.z`, matches changelog
   release headings by the exact bracketed version token, ignores fenced fake
-  headings, and rejects duplicate release sections or bundle-hash entries.
+  headings, rejects duplicate release sections or bundle-hash entries, and
+  fails closed when `origin` tag state cannot be checked.
 
 ## [0.1.1] - 2026-06-22
 
