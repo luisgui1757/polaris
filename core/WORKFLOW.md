@@ -43,8 +43,8 @@ than restating them.
   repository defines that workflow; do not bypass hooks, checks, or review gates
   without explicit permission.
 - Keep generated artifacts reproducible and fail loudly when they drift.
-- Do not add AI or agent co-author, attribution, or provenance trailers to
-  commits unless the user explicitly requests them.
+- Follow the repository's commit attribution and provenance policy; do not invent
+  trailers without an explicit project or user requirement.
 - Clean up temporary worktrees, branches, caches, and scratch files when done.
 
 ## Handoff

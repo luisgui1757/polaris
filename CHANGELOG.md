@@ -11,8 +11,10 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
   separation between verified facts, judgment, assumptions, and uncertainty.
 - Workflow rules now forbid hand-editing generated artifacts and require source
   edits, generator runs, and generated-output verification instead.
-- Git workflow rules now forbid AI or agent co-author, attribution, or
-  provenance trailers unless the user explicitly requests them.
+- Git workflow rules now require agents to follow repository attribution and
+  provenance policy instead of inventing commit trailers.
+- Polaris contributor guidance now forbids AI or agent co-author, attribution,
+  or provenance trailers unless the maintainer explicitly requests them.
 - Bug-fix testing rules now require the highest-fidelity practical reproduction
   path before fixing, preferring end-user or E2E workflows where available.
 

@@ -3,7 +3,7 @@
 > `README.md` and `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
 
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
-<!-- version: 0.1.1  sha256: 5ac7b69c615db72fbf86cb774a6c538bf270daadd3aa21877378d723a2a78f4c -->
+<!-- version: 0.1.1  sha256: 0b79f9d33727d0d53edc0d3f88f4f46fc18802b7845f7ba4f9a6cb764d83437e -->
 
 # Operating Contract
 
@@ -270,8 +270,8 @@ than restating them.
   repository defines that workflow; do not bypass hooks, checks, or review gates
   without explicit permission.
 - Keep generated artifacts reproducible and fail loudly when they drift.
-- Do not add AI or agent co-author, attribution, or provenance trailers to
-  commits unless the user explicitly requests them.
+- Follow the repository's commit attribution and provenance policy; do not invent
+  trailers without an explicit project or user requirement.
 - Clean up temporary worktrees, branches, caches, and scratch files when done.
 
 ### Handoff
