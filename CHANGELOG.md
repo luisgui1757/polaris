@@ -18,6 +18,11 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 - Bug-fix testing rules now require the highest-fidelity practical reproduction
   path before fixing, preferring end-user or E2E workflows where available.
 
+### Fixed
+
+- `tools/release-check` now matches changelog release headings by the exact
+  bracketed version token, so `1.2.3` cannot certify against `[11.2.3]`.
+
 ## [0.1.1] - 2026-06-22
 
 Pin to the tag `v0.1.1` and verify the rendered rules with:

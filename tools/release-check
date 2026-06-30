@@ -34,24 +34,23 @@ if [[ -n "$untracked" ]]; then
 fi
 commit=$(git rev-parse --verify HEAD)
 
-# Escape regex metacharacters in the version (the dots are literal, not wildcards).
-ver_re=$(printf '%s' "$ver" | sed 's/[][\.*^$/]/\\&/g')
-# Anchor on the RIGHT so a prefix like 0.1 cannot false-match a [0.1.0] heading:
-# the version must be followed by a non-version char (']', space, end of line).
-if ! grep -qE "^## .*\[?${ver_re}\]?([^0-9.]|$)" CHANGELOG.md; then
+section=$(awk -v ver="$ver" '
+  /^##[[:space:]]+\[/ {
+    heading = $0
+    sub(/^##[[:space:]]+\[/, "", heading)
+    sub(/\].*$/, "", heading)
+    if (in_section) exit
+    if (heading == ver) in_section = 1
+  }
+  in_section { print }
+' CHANGELOG.md)
+if [[ -z "$section" ]]; then
   echo "release-check: CHANGELOG.md has no section for version ${ver}" >&2; exit 1
 fi
 echo "release-check: VERSION=${ver} has a CHANGELOG entry."
 
 manifest_core_dir=$(polaris_manifest_core_dir MANIFEST.json)
 sha=$(polaris_bundle_sha256 "$REPO_ROOT/$manifest_core_dir" MANIFEST.json)
-section=$(awk -v ver_re="$ver_re" '
-  /^## / {
-    if (in_section) exit
-    if ($0 ~ "^## .*\\[?" ver_re "\\]?([^0-9.]|$)") in_section = 1
-  }
-  in_section { print }
-' CHANGELOG.md)
 changelog_sha=""
 while IFS= read -r line; do
   [[ "$line" == *bundle-sha256* ]] || continue

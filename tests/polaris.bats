@@ -402,6 +402,23 @@ JSON
   [[ "$output" == *"CHANGELOG.md bundle-sha256 mismatch"* ]]
 }
 
+@test "release-check: requires an exact changelog version heading" {
+  make_release_fixture
+  printf '1.2.3\n' > "$rel/VERSION"
+  cat > "$rel/CHANGELOG.md" <<EOF
+# Changelog
+
+## [11.2.3] - 2099-01-01
+
+**bundle-sha256:** \`$rel_sha\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md VERSION \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm wrong-section )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
+}
+
 @test "release-check: refuses a dirty working tree" {
   make_release_fixture
   printf 'dirty\n' >> "$rel/CHANGELOG.md"
