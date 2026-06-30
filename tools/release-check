@@ -12,6 +12,10 @@ source "$SCRIPT_DIR/polaris-lib.sh"
 
 ver=$(tr -d ' \r\n' < VERSION 2>/dev/null || true)
 [[ -n "$ver" ]] || { echo "release-check: empty or missing VERSION" >&2; exit 1; }
+if [[ ! "$ver" =~ ^(0|[1-9][0-9]*)\.([0]|[1-9][0-9]*)\.([0]|[1-9][0-9]*)$ ]]; then
+  echo "release-check: VERSION must be SemVer x.y.z: ${ver}" >&2
+  exit 1
+fi
 
 if [[ ! -f CHANGELOG.md ]]; then
   echo "release-check: CHANGELOG.md missing" >&2; exit 1
@@ -34,33 +38,58 @@ if [[ -n "$untracked" ]]; then
 fi
 commit=$(git rev-parse --verify HEAD)
 
+set +e
 section=$(awk -v ver="$ver" '
-  /^##[[:space:]]+\[/ {
+  /^[[:space:]]*(```|~~~)/ { in_fence = !in_fence }
+  !in_fence && /^##[[:space:]]+/ {
+    if (in_section) in_section = 0
+    if ($0 !~ /^##[[:space:]]+\[/) next
     heading = $0
     sub(/^##[[:space:]]+\[/, "", heading)
     sub(/\].*$/, "", heading)
-    if (in_section) exit
-    if (heading == ver) in_section = 1
+    if (heading == ver) {
+      matches += 1
+      if (matches == 1) {
+        in_section = 1
+        print
+      }
+    }
+    next
   }
   in_section { print }
+  END {
+    if (matches > 1) exit 2
+    if (matches == 0) exit 1
+  }
 ' CHANGELOG.md)
-if [[ -z "$section" ]]; then
+section_status=$?
+set -e
+if [[ "$section_status" -eq 1 ]]; then
   echo "release-check: CHANGELOG.md has no section for version ${ver}" >&2; exit 1
+elif [[ "$section_status" -eq 2 ]]; then
+  echo "release-check: CHANGELOG.md has multiple sections for version ${ver}" >&2; exit 1
+elif [[ "$section_status" -ne 0 ]]; then
+  echo "release-check: failed to parse CHANGELOG.md" >&2; exit 1
 fi
 echo "release-check: VERSION=${ver} has a CHANGELOG entry."
 
 manifest_core_dir=$(polaris_manifest_core_dir MANIFEST.json)
 sha=$(polaris_bundle_sha256 "$REPO_ROOT/$manifest_core_dir" MANIFEST.json)
 changelog_sha=""
+changelog_sha_count=0
 while IFS= read -r line; do
   [[ "$line" == *bundle-sha256* ]] || continue
   if [[ "$line" =~ ([0-9A-Fa-f]{64}) ]]; then
+    changelog_sha_count=$((changelog_sha_count + 1))
     changelog_sha=$(printf '%s' "${BASH_REMATCH[1]}" | tr 'A-F' 'a-f')
-    break
   fi
 done <<< "$section"
-if [[ -z "$changelog_sha" ]]; then
+if [[ "$changelog_sha_count" -eq 0 ]]; then
   echo "release-check: CHANGELOG.md section for ${ver} has no bundle-sha256 entry" >&2
+  exit 1
+fi
+if [[ "$changelog_sha_count" -gt 1 ]]; then
+  echo "release-check: CHANGELOG.md section for ${ver} has multiple bundle-sha256 entries" >&2
   exit 1
 fi
 if [[ "$changelog_sha" != "$sha" ]]; then

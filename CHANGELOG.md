@@ -20,8 +20,9 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ### Fixed
 
-- `tools/release-check` now matches changelog release headings by the exact
-  bracketed version token, so `1.2.3` cannot certify against `[11.2.3]`.
+- `tools/release-check` now validates `VERSION` as `x.y.z`, matches changelog
+  release headings by the exact bracketed version token, ignores fenced fake
+  headings, and rejects duplicate release sections or bundle-hash entries.
 
 ## [0.1.1] - 2026-06-22
 

@@ -127,29 +127,38 @@ Acceptance criteria:
 Status: fixed in this branch. `tools/release-check` now requires a clean
 index/worktree with no untracked files, rejects existing local/checkable remote
 tags, verifies the exact current `bundle-sha256` in the matching changelog
-section, prints the certified commit, and `polaris_bundle_sha256` fails closed
-without relying on caller `pipefail`.
+section by exact bracketed `x.y.z` heading outside fenced blocks, rejects
+duplicate release sections or bundle-hash entries, prints the certified commit,
+and `polaris_bundle_sha256` fails closed without relying on caller `pipefail`.
 
-Gap: `make release-check` can certify a release without proving the exact
-published `bundle-sha256`, without proving the tree is clean, and while the
-documented hash helper can fail open outside `pipefail`.
+Resolved gap: `make release-check` previously could certify a release without
+proving the exact published `bundle-sha256`, without proving the tree is clean,
+and while the documented hash helper could fail open outside `pipefail`. A later
+audit also found the changelog section match was too loose: `VERSION=1.2.3`
+could match a `[11.2.3]` heading, non-`x.y.z` version tokens were not rejected,
+and ambiguous duplicate sections or bundle-hash entries were not rejected.
 
-Evidence:
+Historical evidence:
 
 - `docs/RELEASE.md` requires recording the `bundle-sha256`.
-- `tools/release-check` checks only that a changelog section for `VERSION`
-  exists, then runs install/CI/tests.
-- `tools/release-check` prints "safe to tag" without checking staged changes,
+- `tools/release-check` checked only that a changelog section for `VERSION`
+  existed, then ran install/CI/tests.
+- `tools/release-check` printed "safe to tag" without checking staged changes,
   unstaged changes, untracked files, existing `v$VERSION` tags, or the exact
   commit being certified.
 - Verified locally: `polaris_render_bundle core /dev/null` exits 1, but
-  `polaris_bundle_sha256 core /dev/null` emits the empty SHA and exits 0 in a
-  plain shell.
+  `polaris_bundle_sha256 core /dev/null` emitted the empty SHA and exited 0 in a
+  plain shell before the fix.
+- Audit reproduction: the old changelog heading regex could match
+  `VERSION=1.2.3` against `## [11.2.3]`.
+- Audit reproduction: release-check accepted non-`x.y.z` `VERSION` values,
+  fenced fake headings, duplicate release sections, and duplicate bundle hashes.
 
-Proposed solution:
+Implemented solution:
 
 - Make `release-check` compute the current bundle hash, parse the matching
-  changelog version section, and fail unless that exact hash appears there.
+  changelog version section by exact bracketed `x.y.z` heading outside fenced
+  blocks, and fail unless exactly one matching hash appears there.
 - Make `release-check` fail unless the index and working tree are clean and no
   non-ignored untracked files exist.
 - Print the exact commit SHA being certified and fail if `v$VERSION` already
@@ -160,6 +169,9 @@ Proposed solution:
 Acceptance criteria:
 
 - Wrong or missing changelog bundle hash fails a regression test.
+- A sibling heading such as `[11.2.3]` cannot satisfy `VERSION=1.2.3`.
+- Non-`x.y.z` versions, fenced fake headings, duplicate release sections, and
+  duplicate bundle-hash entries fail.
 - Dirty, staged, or untracked release trees fail.
 - An invalid manifest never produces a successful SHA helper result.
 
