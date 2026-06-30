@@ -5,6 +5,17 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
+### Added
+
+- Communication rules now require direct answers, concise wording, and clear
+  separation between verified facts, judgment, assumptions, and uncertainty.
+- Workflow rules now forbid hand-editing generated artifacts and require source
+  edits, generator runs, and generated-output verification instead.
+- Git workflow rules now forbid AI or agent co-author, attribution, or
+  provenance trailers unless the user explicitly requests them.
+- Bug-fix testing rules now require the highest-fidelity practical reproduction
+  path before fixing, preferring end-user or E2E workflows where available.
+
 ## [0.1.1] - 2026-06-22
 
 Pin to the tag `v0.1.1` and verify the rendered rules with:

@@ -17,6 +17,8 @@ than restating them.
   clear, reviewable scripts instead.
 - Preserve user changes and unrelated worktree state; never overwrite, revert,
   reformat, or delete files the task did not ask you to touch.
+- Do not hand-edit generated artifacts. Edit the source inputs, run the
+  generator, and verify the generated output instead.
 - Do not add dependencies, run installers, start services, perform migrations, or
   use networked tooling unless the task requires it and repository practice
   justifies it.
@@ -41,6 +43,8 @@ than restating them.
   repository defines that workflow; do not bypass hooks, checks, or review gates
   without explicit permission.
 - Keep generated artifacts reproducible and fail loudly when they drift.
+- Do not add AI or agent co-author, attribution, or provenance trailers to
+  commits unless the user explicitly requests them.
 - Clean up temporary worktrees, branches, caches, and scratch files when done.
 
 ## Handoff

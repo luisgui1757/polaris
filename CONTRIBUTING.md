@@ -40,6 +40,8 @@ bundle.
 - Conventional commit subjects (`feat:`, `fix:`, `chore:`, `docs:`, `review:`),
   imperative mood, ≤72 chars.
 - One concern per commit where practical.
+- Do not add AI or agent co-author, attribution, or provenance trailers unless
+  the maintainer explicitly requests them.
 - External contributions land via PR; `main` is protected for everyone but the
   owner — squash-only merge, linear history, required `ci` check, mandatory
   code-owner review (see `.github/rulesets/`). The repo owner holds an
