@@ -5,6 +5,16 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-01
+
+Pin to the tag `v0.1.2` and verify the rendered rules with:
+
+**bundle-sha256:** `0b79f9d33727d0d53edc0d3f88f4f46fc18802b7845f7ba4f9a6cb764d83437e`
+
+```bash
+tools/verify-vendor <vendored-dir> 0b79f9d33727d0d53edc0d3f88f4f46fc18802b7845f7ba4f9a6cb764d83437e
+```
+
 ### Added
 
 - Communication rules now require direct answers, concise wording, and clear
