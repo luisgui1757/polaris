@@ -402,6 +402,119 @@ JSON
   [[ "$output" == *"CHANGELOG.md bundle-sha256 mismatch"* ]]
 }
 
+@test "release-check: requires an exact changelog version heading" {
+  make_release_fixture
+  printf '1.2.3\n' > "$rel/VERSION"
+  cat > "$rel/CHANGELOG.md" <<EOF
+# Changelog
+
+## [11.2.3] - 2099-01-01
+
+**bundle-sha256:** \`$rel_sha\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md VERSION \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm wrong-section )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
+}
+
+@test "release-check: rejects non-semver VERSION values" {
+  make_release_fixture
+  printf 'Unreleased\n' > "$rel/VERSION"
+  cat > "$rel/CHANGELOG.md" <<EOF
+# Changelog
+
+## [Unreleased]
+
+**bundle-sha256:** \`$rel_sha\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md VERSION \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm bad-version )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"VERSION must be SemVer x.y.z"* ]]
+}
+
+@test "release-check: ignores fenced changelog headings" {
+  make_release_fixture
+  printf '1.2.3\n' > "$rel/VERSION"
+  cat > "$rel/CHANGELOG.md" <<EOF
+# Changelog
+
+\`\`\`md
+## [1.2.3] - 2099-01-01
+
+**bundle-sha256:** \`$rel_sha\`
+\`\`\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md VERSION \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm fenced-heading )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
+}
+
+@test "release-check: ignores headings inside longer fenced blocks" {
+  make_release_fixture
+  printf '1.2.3\n' > "$rel/VERSION"
+  cat > "$rel/CHANGELOG.md" <<EOF
+# Changelog
+
+\`\`\`\`md
+\`\`\`text
+## [1.2.3] - 2099-01-01
+
+**bundle-sha256:** \`$rel_sha\`
+\`\`\`
+\`\`\`\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md VERSION \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm nested-fence-heading )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
+}
+
+@test "release-check: rejects duplicate changelog version sections" {
+  make_release_fixture
+  cat >> "$rel/CHANGELOG.md" <<EOF
+
+## [0.1.0] - 2099-01-02
+
+**bundle-sha256:** \`$rel_sha\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm duplicate-section )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md has multiple sections for version 0.1.0"* ]]
+}
+
+@test "release-check: rejects duplicate bundle hashes in the release section" {
+  make_release_fixture
+  cat >> "$rel/CHANGELOG.md" <<EOF
+**bundle-sha256:** \`0000000000000000000000000000000000000000000000000000000000000000\`
+EOF
+  ( cd "$rel" && git add CHANGELOG.md \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm duplicate-hash )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md section for 0.1.0 has multiple bundle-sha256 entries"* ]]
+}
+
+@test "release-check: rejects duplicate bundle hashes on one line" {
+  make_release_fixture
+  sed "s/${rel_sha}/${rel_sha} 0000000000000000000000000000000000000000000000000000000000000000/" \
+    "$rel/CHANGELOG.md" > "$rel/CHANGELOG.md.t"
+  mv "$rel/CHANGELOG.md.t" "$rel/CHANGELOG.md"
+  ( cd "$rel" && git add CHANGELOG.md \
+      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm duplicate-same-line-hash )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"CHANGELOG.md section for 0.1.0 has multiple bundle-sha256 entries"* ]]
+}
+
 @test "release-check: refuses a dirty working tree" {
   make_release_fixture
   printf 'dirty\n' >> "$rel/CHANGELOG.md"
@@ -490,6 +603,14 @@ JSON
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"remote tag v"*"already exists on origin"* ]]
+}
+
+@test "release-check: fails when remote tag state is uncheckable" {
+  make_release_fixture
+  ( cd "$rel" && git remote add origin "$TMP/missing-origin.git" )
+  run bash "$rel/tools/release-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"could not verify remote tags on origin"* ]]
 }
 
 @test "ruleset-check: validates local semantics and rejects wrong ci context" {

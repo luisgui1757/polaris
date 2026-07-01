@@ -40,6 +40,9 @@ bundle.
 - Conventional commit subjects (`feat:`, `fix:`, `chore:`, `docs:`, `review:`),
   imperative mood, ≤72 chars.
 - One concern per commit where practical.
+- Agent-authored commits may use the configured agent or app identity as the
+  actual author/committer. Do not add `Co-authored-by` or similar boilerplate
+  attribution trailers unless the maintainer explicitly requests them.
 - External contributions land via PR; `main` is protected for everyone but the
   owner — squash-only merge, linear history, required `ci` check, mandatory
   code-owner review (see `.github/rulesets/`). The repo owner holds an

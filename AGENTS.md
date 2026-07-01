@@ -3,7 +3,7 @@
 > `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
 
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
-<!-- version: 0.1.1  sha256: 19c74a2a3c056c8895f2ecb1dd112ffd6a396f3371210149cd9e1c618176751a -->
+<!-- version: 0.1.1  sha256: 0b79f9d33727d0d53edc0d3f88f4f46fc18802b7845f7ba4f9a6cb764d83437e -->
 
 # Operating Contract
 
@@ -160,6 +160,13 @@ How to behave while doing the work — mode-independent reasoning discipline.
 - Do not change or remove code or comments you do not understand well enough to
   explain.
 
+### Communicate Precisely
+
+- Answer the user's direct question first, then give the necessary context,
+  action, or evidence.
+- Be concise, direct, and precise. Separate verified facts from judgment,
+  assumptions, and uncertainty; do not pad the answer with filler.
+
 ### No Unapproved Compromises
 
 - Treat the delivery bar as the uncompromised ubiquitous canonical gold-standard
@@ -237,6 +244,8 @@ than restating them.
   clear, reviewable scripts instead.
 - Preserve user changes and unrelated worktree state; never overwrite, revert,
   reformat, or delete files the task did not ask you to touch.
+- Do not hand-edit generated artifacts. Edit the source inputs, run the
+  generator, and verify the generated output instead.
 - Do not add dependencies, run installers, start services, perform migrations, or
   use networked tooling unless the task requires it and repository practice
   justifies it.
@@ -261,6 +270,8 @@ than restating them.
   repository defines that workflow; do not bypass hooks, checks, or review gates
   without explicit permission.
 - Keep generated artifacts reproducible and fail loudly when they drift.
+- Follow the repository's commit attribution and provenance policy; do not invent
+  trailers without an explicit project or user requirement.
 - Clean up temporary worktrees, branches, caches, and scratch files when done.
 
 ### Handoff
@@ -274,6 +285,9 @@ The single source for test rules.
 
 - Test behavior, not implementation details. One behavior per test, arranged as
   arrange / act / assert.
+- For bug fixes, reproduce the failure through the highest-fidelity practical
+  path first. Prefer the end-user or E2E workflow when available; when a narrower
+  reproduction is the right proof, state why.
 - Add a focused regression test for every fix, and a legacy-shape test for every
   persisted-data change.
 - Mock only at system boundaries (network, filesystem, time, process); never mock

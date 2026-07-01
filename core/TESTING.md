@@ -4,6 +4,9 @@ The single source for test rules.
 
 - Test behavior, not implementation details. One behavior per test, arranged as
   arrange / act / assert.
+- For bug fixes, reproduce the failure through the highest-fidelity practical
+  path first. Prefer the end-user or E2E workflow when available; when a narrower
+  reproduction is the right proof, state why.
 - Add a focused regression test for every fix, and a legacy-shape test for every
   persisted-data change.
 - Mock only at system boundaries (network, filesystem, time, process); never mock

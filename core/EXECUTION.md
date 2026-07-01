@@ -13,6 +13,13 @@ How to behave while doing the work — mode-independent reasoning discipline.
 - Do not change or remove code or comments you do not understand well enough to
   explain.
 
+## Communicate Precisely
+
+- Answer the user's direct question first, then give the necessary context,
+  action, or evidence.
+- Be concise, direct, and precise. Separate verified facts from judgment,
+  assumptions, and uncertainty; do not pad the answer with filler.
+
 ## No Unapproved Compromises
 
 - Treat the delivery bar as the uncompromised ubiquitous canonical gold-standard

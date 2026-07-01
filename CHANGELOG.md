@@ -5,6 +5,27 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
+### Added
+
+- Communication rules now require direct answers, concise wording, and clear
+  separation between verified facts, judgment, assumptions, and uncertainty.
+- Workflow rules now forbid hand-editing generated artifacts and require source
+  edits, generator runs, and generated-output verification instead.
+- Git workflow rules now require agents to follow repository attribution and
+  provenance policy instead of inventing commit trailers.
+- Polaris contributor guidance now allows configured agent author/committer
+  identity while forbidding unsolicited `Co-authored-by`-style boilerplate
+  trailers.
+- Bug-fix testing rules now require the highest-fidelity practical reproduction
+  path before fixing, preferring end-user or E2E workflows where available.
+
+### Fixed
+
+- `tools/release-check` now validates `VERSION` as `x.y.z`, matches changelog
+  release headings by the exact bracketed version token, ignores fenced fake
+  headings, rejects duplicate release sections or bundle-hash entries, and
+  fails closed when `origin` tag state cannot be checked.
+
 ## [0.1.1] - 2026-06-22
 
 Pin to the tag `v0.1.1` and verify the rendered rules with:
