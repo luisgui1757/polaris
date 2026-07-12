@@ -1,6 +1,6 @@
-# Tool Ingestion — how each CLI loads Polaris
+# Tool Ingestion — how each CLI loads Sentinel
 
-Polaris works by inlining its rules into the file each AI CLI already auto-loads
+Sentinel works by inlining its rules into the file each AI CLI already auto-loads
 at startup. This is the durable record of *which* file, *where* globally, and the
 per-tool gotchas — kept OUT of the injected bundle to protect the token budget.
 The machine-readable source for the supported-tool matrix is
@@ -17,7 +17,7 @@ silently drift.
 | Pi CLI | `AGENTS.md` (or `CLAUDE.md`) | `~/.pi/agent/AGENTS.md` (`$PI_CODING_AGENT_DIR`) | no | local-package-confirmed 2026-06-18 |
 
 All five inject their entrypoint into context at startup with **no tool call**.
-Polaris **inlines** (does not point) because four of the five have no import
+Sentinel **inlines** (does not point) because four of the five have no import
 syntax — a pointer would force the agent to re-read files every session.
 
 ## Per-tool gotchas

@@ -1,4 +1,4 @@
-# Polaris — design decisions & rejected findings
+# Sentinel — design decisions & rejected findings
 
 A durable record of choices made deliberately and review findings rejected as
 false alarms, so they are not re-litigated. This is forensic detail that does not

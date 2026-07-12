@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Polaris local preflight gate, runnable on your machine.
+# Sentinel local preflight gate, runnable on your machine.
 #
 # Runs the privacy leak scan, render smoke test, adapter drift check, semantic
 # ruleset check, lint, and ShellCheck. GitHub's required `ci` aggregate is
@@ -9,29 +9,29 @@ export LC_ALL=C
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-echo "polaris ci: core + whole-tree leak check"
+echo "sentinel ci: core + whole-tree leak check"
 bash "$SCRIPT_DIR/check"
 
-echo "polaris ci: render smoke"
+echo "sentinel ci: render smoke"
 bash "$SCRIPT_DIR/render" > /dev/null
 
-echo "polaris ci: adapter drift check"
+echo "sentinel ci: adapter drift check"
 bash "$SCRIPT_DIR/install" --check
 
-echo "polaris ci: ruleset semantics"
+echo "sentinel ci: ruleset semantics"
 bash "$SCRIPT_DIR/ruleset-check"
 
-echo "polaris ci: lint (yaml + editorconfig + secrets + schema)"
+echo "sentinel ci: lint (yaml + editorconfig + secrets + schema)"
 bash "$SCRIPT_DIR/lint"
 
-echo "polaris ci: shellcheck (shell tooling correctness)"
+echo "sentinel ci: shellcheck (shell tooling correctness)"
 if command -v shellcheck >/dev/null 2>&1; then
   bash "$SCRIPT_DIR/lint-shell"
-elif [[ "${POLARIS_STRICT:-0}" == 1 ]]; then
-  echo "polaris ci: FAIL: shellcheck is required in strict mode but is not installed." >&2
+elif [[ "${SENTINEL_STRICT:-0}" == 1 ]]; then
+  echo "sentinel ci: FAIL: shellcheck is required in strict mode but is not installed." >&2
   exit 1
 else
-  echo "polaris ci: shellcheck not installed; SKIPPING (set POLARIS_STRICT=1 to require it)" >&2
+  echo "sentinel ci: shellcheck not installed; SKIPPING (set SENTINEL_STRICT=1 to require it)" >&2
 fi
 
-echo "polaris ci: passed."
+echo "sentinel ci: passed."

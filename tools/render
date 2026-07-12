@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Polaris generic render CLI.
+# Sentinel generic render CLI.
 #
-# Prints the Polaris core read-order files (MANIFEST.json then the required
+# Prints the Sentinel core read-order files (MANIFEST.json then the required
 # core files) so a tool or human can paste the contract. Consuming
 # repositories render this generic core first, then append their overlay.
 set -euo pipefail
@@ -9,10 +9,10 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
-# shellcheck source=polaris-lib.sh
-source "$SCRIPT_DIR/polaris-lib.sh"
+# shellcheck source=sentinel-lib.sh
+source "$SCRIPT_DIR/sentinel-lib.sh"
 
-printf '# Polaris Core\n'
+printf '# Sentinel Core\n'
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
-polaris_render_core "$CORE" "$MANIFEST"
+CORE="$REPO_ROOT/$(sentinel_manifest_core_dir "$MANIFEST")"
+sentinel_render_core "$CORE" "$MANIFEST"

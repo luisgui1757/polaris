@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Polaris's local CI as a git pre-push hook (run once per clone).
+# Install Sentinel's local CI as a git pre-push hook (run once per clone).
 #
 # The hook runs `make gate` before every push: strict local preflight, ruleset
 # semantics, bats, and the PowerShell drift check. Bypass once with
@@ -18,7 +18,7 @@ HOOK_DIR="$REPO_ROOT/.git/hooks"
 mkdir -p "$HOOK_DIR"
 cat > "$HOOK_DIR/pre-push" <<'HOOK'
 #!/usr/bin/env bash
-# Polaris pre-push gate (installed by tools/install-hooks).
+# Sentinel pre-push gate (installed by tools/install-hooks).
 set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel)
 exec make -C "$ROOT" gate

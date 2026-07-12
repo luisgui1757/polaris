@@ -1,4 +1,4 @@
-# Polaris task entry point. Thin wrappers over tools/*; mirrors the house
+# Sentinel task entry point. Thin wrappers over tools/*; mirrors the house
 # Makefile convention so `make ci`, `make test`, `make install-hooks` behave the
 # same as in sibling repos.
 .PHONY: help preflight ci gate check ruleset-check render test lint lint-shell status \
@@ -24,8 +24,8 @@ gate: ## Strongest local gate (strict preflight + regression suite)
 		echo "gate: install pwsh or rely on the GitHub Windows job for that proof."; \
 		exit 1; \
 	fi
-	@POLARIS_STRICT=1 bash tools/ci
-	@POLARIS_STRICT=1 bash tests/run.sh
+	@SENTINEL_STRICT=1 bash tools/ci
+	@SENTINEL_STRICT=1 bash tests/run.sh
 	@pwsh -NoProfile -File tools/install.ps1 -Check
 
 render: ## Print the rendered core contract
@@ -52,7 +52,7 @@ install-global: ## Write/update per-user (global) AI-CLI entrypoints
 install-hooks: ## Install the git pre-push CI gate (run once per clone)
 	@bash tools/install-hooks
 
-uninstall: ## Remove Polaris blocks from this repo's entrypoints
+uninstall: ## Remove Sentinel blocks from this repo's entrypoints
 	@bash tools/install --remove
 
 safeguards: ## Apply branch-protection rulesets + repo settings via gh

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Polaris status -- where the rules are installed and whether they are current.
+# Sentinel status -- where the rules are installed and whether they are current.
 #
 # For each entrypoint (repo-local and per-user/global): is it present, does it
 # carry the managed block, and does that block match the CURRENTLY rendered
@@ -10,10 +10,10 @@ export LC_ALL=C
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
-# shellcheck source=polaris-lib.sh
-source "$SCRIPT_DIR/polaris-lib.sh"
+# shellcheck source=sentinel-lib.sh
+source "$SCRIPT_DIR/sentinel-lib.sh"
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
+CORE="$REPO_ROOT/$(sentinel_manifest_core_dir "$MANIFEST")"
 METADATA="$REPO_ROOT/templates/adapters/tool-metadata.tsv"
 
 TARGET_DIR="$REPO_ROOT"
@@ -23,9 +23,9 @@ case "${1:-}" in
 esac
 
 ver=$(tr -d ' \r\n' < "$REPO_ROOT/VERSION" 2>/dev/null || echo dev)
-sha=$(polaris_bundle_sha256 "$CORE" "$MANIFEST")
+sha=$(sentinel_bundle_sha256 "$CORE" "$MANIFEST")
 blockfile=$(mktemp)
-polaris_render_managed_block "$CORE" "$MANIFEST" "$REPO_ROOT/VERSION" > "$blockfile"
+sentinel_render_managed_block "$CORE" "$MANIFEST" "$REPO_ROOT/VERSION" > "$blockfile"
 trap 'rm -f "$blockfile"' EXIT
 
 state_of() {
@@ -33,7 +33,7 @@ state_of() {
   if [[ ! -e "$path" ]]; then printf 'absent'; return; fi
   if ! grep -q '^<!-- AGENT-RULES:BEGIN' "$path" 2>/dev/null; then printf 'no-block'; return; fi
   out=$(mktemp)
-  if polaris_compose_adapter "$path" "$blockfile" "$out"; then
+  if sentinel_compose_adapter "$path" "$blockfile" "$out"; then
     if cmp -s "$path" "$out"; then state=current; else state=STALE; fi
   else
     state=MALFORMED
@@ -114,13 +114,13 @@ cli_binaries() {
   done < <(read_metadata)
 }
 
-echo "polaris status -- v$ver, current bundle ${sha:0:12}"
+echo "sentinel status -- v$ver, current bundle ${sha:0:12}"
 echo
 echo "repo ($TARGET_DIR):"
-while IFS= read -r t; do repo_row "$t"; done < <(polaris_repo_adapter_targets "$TARGET_DIR")
+while IFS= read -r t; do repo_row "$t"; done < <(sentinel_repo_adapter_targets "$TARGET_DIR")
 echo
 echo "global (per-user):"
-while IFS= read -r t; do global_row "$t"; done < <(polaris_global_adapter_targets)
+while IFS= read -r t; do global_row "$t"; done < <(sentinel_global_adapter_targets)
 echo
 printf 'CLI binaries on PATH:'
 cli_binaries

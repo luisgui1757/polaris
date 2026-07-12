@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Polaris lint gate: yamllint + editorconfig-checker + gitleaks + check-jsonschema.
+# Sentinel lint gate: yamllint + editorconfig-checker + gitleaks + check-jsonschema.
 #
 # Single source for the lint checks so the LOCAL gate (tools/ci, the pre-push
 # hook, release-check) runs exactly what the GitHub `lint` job runs. A lint
 # FAILURE always propagates (set -e) -- it is never masked.
 #
 # Strict vs. lenient (the gold-standard "no silent skip" rule):
-#   - POLARIS_STRICT=1 (or --strict): every linter MUST be installed; a missing
+#   - SENTINEL_STRICT=1 (or --strict): every linter MUST be installed; a missing
 #     one FAILS the gate. CI and release-check run strict, so the required gate
 #     is real -- it can never report "passed" having scanned nothing.
 #   - default (a clean dev clone): a missing linter is SKIPPED loudly and counted,
@@ -19,7 +19,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO_ROOT"
 
-STRICT="${POLARIS_STRICT:-0}"
+STRICT="${SENTINEL_STRICT:-0}"
 [[ "${1:-}" == "--strict" ]] && STRICT=1
 
 skipped=()
@@ -35,7 +35,7 @@ require_tool() {
     echo "lint: FAIL: '$tool' is required in strict mode but is not installed." >&2
     exit 1
   fi
-  echo "lint: $tool not installed; SKIPPING (set POLARIS_STRICT=1 to require it)" >&2
+  echo "lint: $tool not installed; SKIPPING (set SENTINEL_STRICT=1 to require it)" >&2
   skipped+=("$tool")
   return 1
 }
@@ -58,7 +58,7 @@ if require_tool check-jsonschema; then
 fi
 
 if ((${#skipped[@]})); then
-  echo "lint: passed, but NOT a full gate -- skipped: ${skipped[*]} (run in CI / POLARIS_STRICT=1 for the real gate)."
+  echo "lint: passed, but NOT a full gate -- skipped: ${skipped[*]} (run in CI / SENTINEL_STRICT=1 for the real gate)."
 else
   echo "lint: passed (all linters ran)."
 fi

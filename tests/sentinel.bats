@@ -1,17 +1,17 @@
 #!/usr/bin/env bats
-# Polaris tooling regression tests. Run via `tests/run.sh` or `bats tests`.
+# Sentinel tooling regression tests. Run via `tests/run.sh` or `bats tests`.
 # Hermetic: scan tests use a fixture manifest + denylist (the real denylist is
 # gitignored and absent in CI); install tests use the repo's real core.
 
 setup() {
   ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
-  # shellcheck source=../tools/polaris-lib.sh
-  source "$ROOT/tools/polaris-lib.sh"
+  # shellcheck source=../tools/sentinel-lib.sh
+  source "$ROOT/tools/sentinel-lib.sh"
   TMP="$(mktemp -d)"
   cat > "$TMP/MANIFEST.json" <<'JSON'
 {
   "schema_version": 1,
-  "name": "polaris",
+  "name": "sentinel",
   "core_dir": "core",
   "required_core_read_order": ["core/INVARIANTS.md"],
   "forbidden_core_terms": ["GENPATH"],
@@ -24,16 +24,16 @@ JSON
 }
 teardown() { rm -rf "$TMP"; }
 
-scan() { bash -c "source '$ROOT/tools/polaris-lib.sh'; $1 2>&1"; }
+scan() { bash -c "source '$ROOT/tools/sentinel-lib.sh'; $1 2>&1"; }
 
 make_release_fixture() {
   rel="$TMP/release-fixture"
   mkdir -p "$rel/tools" "$rel/tests" "$rel/core"
   cp -R "$ROOT/core/." "$rel/core/"
   cp "$ROOT/MANIFEST.json" "$rel/MANIFEST.json"
-  cp "$ROOT/tools/polaris-lib.sh" "$ROOT/tools/release-check" "$rel/tools/"
+  cp "$ROOT/tools/sentinel-lib.sh" "$ROOT/tools/release-check" "$rel/tools/"
   printf '0.1.0\n' > "$rel/VERSION"
-  rel_sha="$(bash -c "source '$ROOT/tools/polaris-lib.sh'; polaris_bundle_sha256 '$rel/core' '$rel/MANIFEST.json'")"
+  rel_sha="$(bash -c "source '$ROOT/tools/sentinel-lib.sh'; sentinel_bundle_sha256 '$rel/core' '$rel/MANIFEST.json'")"
   cat > "$rel/CHANGELOG.md" <<EOF
 # Changelog
 
@@ -46,35 +46,35 @@ EOF
   printf '#!/usr/bin/env bash\nprintf "tests\\n" >> release-gates.log\nexit 0\n' > "$rel/tests/run.sh"
   chmod +x "$rel/tools/install" "$rel/tools/ci" "$rel/tests/run.sh"
   ( cd "$rel" && git init -q && git add -A \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
 }
 
 commit_release_fixture_change() {
   ( cd "$rel" && git add -A \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm fixture-change >/dev/null 2>&1 )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm fixture-change >/dev/null 2>&1 )
 }
 
 @test "manifest_value reads the name" {
-  run polaris_manifest_value "$FM" name
+  run sentinel_manifest_value "$FM" name
   [ "$status" -eq 0 ]
-  [ "$output" = "polaris" ]
+  [ "$output" = "sentinel" ]
 }
 
 @test "forbidden_terms merges generic (M) and private (L)" {
-  run polaris_forbidden_terms "$FM"
+  run sentinel_forbidden_terms "$FM"
   [[ "$output" == *"M"*"GENPATH"* ]]
   [[ "$output" == *"L"*"SECRETPROJ"* ]]
 }
 
 @test "scan: a clean file passes" {
   echo "nothing private here" > "$TMP/clean.md"
-  run scan "polaris_scan_terms '$FM' '$TMP/clean.md'"
+  run scan "sentinel_scan_terms '$FM' '$TMP/clean.md'"
   [ "$status" -eq 0 ]
 }
 
 @test "scan: private hit fails, redacts the term AND adjacent secrets (location-only)" {
   printf 'leak SECRETPROJ and TOKEN=xyz789\n' > "$TMP/bad.md"
-  run scan "polaris_scan_terms '$FM' '$TMP/bad.md'"
+  run scan "sentinel_scan_terms '$FM' '$TMP/bad.md'"
   [ "$status" -eq 1 ]
   [[ "$output" != *"SECRETPROJ"* ]]
   [[ "$output" != *"TOKEN=xyz789"* ]]
@@ -84,19 +84,19 @@ commit_release_fixture_change() {
 
 @test "scan: overlapping terms are masked longest-first (no stray fragment)" {
   printf 'see alpha-beta now\n' > "$TMP/ov.md"
-  run scan "polaris_scan_terms '$FM' '$TMP/ov.md'"
+  run scan "sentinel_scan_terms '$FM' '$TMP/ov.md'"
   [[ "$output" != *"-beta"* ]]
 }
 
 @test "scan: a generic term still echoes (public, not redacted)" {
   printf 'here GENPATH appears\n' > "$TMP/g.md"
-  run scan "polaris_scan_terms '$FM' '$TMP/g.md'"
+  run scan "sentinel_scan_terms '$FM' '$TMP/g.md'"
   [ "$status" -eq 1 ]
   [[ "$output" == *"GENPATH"* ]]
 }
 
 @test "pathnames: a private term in a filename is caught and redacted" {
-  run scan "polaris_scan_pathnames '$FM' 'src/SECRETPROJ-notes.md' 'core/ok.md'"
+  run scan "sentinel_scan_pathnames '$FM' 'src/SECRETPROJ-notes.md' 'core/ok.md'"
   [ "$status" -eq 1 ]
   [[ "$output" != *"SECRETPROJ"* ]]
 }
@@ -147,7 +147,7 @@ commit_release_fixture_change() {
   [[ "$output" == *"MISSING"* ]]
 }
 
-@test "remove: keeps user text, deletes Polaris-only files" {
+@test "remove: keeps user text, deletes Sentinel-only files" {
   app="$TMP/app5"; mkdir -p "$app"
   printf '# Mine\nkeep this\n' > "$app/AGENTS.md"
   bash "$ROOT/tools/install" --target "$app" >/dev/null
@@ -159,8 +159,8 @@ commit_release_fixture_change() {
 }
 
 @test "bundle sha is stable across calls (deterministic)" {
-  a="$(polaris_bundle_sha256 "$ROOT/core" "$ROOT/MANIFEST.json")"
-  b="$(polaris_bundle_sha256 "$ROOT/core" "$ROOT/MANIFEST.json")"
+  a="$(sentinel_bundle_sha256 "$ROOT/core" "$ROOT/MANIFEST.json")"
+  b="$(sentinel_bundle_sha256 "$ROOT/core" "$ROOT/MANIFEST.json")"
   [ "$a" = "$b" ]
 }
 
@@ -169,7 +169,7 @@ commit_release_fixture_change() {
   cat > "$bad/MANIFEST.json" <<'JSON'
 {
   "schema_version": 1,
-  "name": "polaris",
+  "name": "sentinel",
   "core_dir": "core",
   "required_core_read_order": ["core/MISSING.md"],
   "optional_core_files": ["core/OPTIONAL.md"],
@@ -178,7 +178,7 @@ commit_release_fixture_change() {
 }
 JSON
   printf 'optional\n' > "$bad/core/OPTIONAL.md"
-  run bash -c 'set +o pipefail; source "$1"; polaris_bundle_sha256 "$2/core" "$2/MANIFEST.json" 2>&1' _ "$ROOT/tools/polaris-lib.sh" "$bad"
+  run bash -c 'set +o pipefail; source "$1"; sentinel_bundle_sha256 "$2/core" "$2/MANIFEST.json" 2>&1' _ "$ROOT/tools/sentinel-lib.sh" "$bad"
   [ "$status" -ne 0 ]
   [[ "$output" == *"missing required core file: core/MISSING.md"* ]]
   [[ "$output" != *"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"* ]]
@@ -188,7 +188,7 @@ JSON
   repo="$TMP/gitrepo"; mkdir -p "$repo"
   cp -R "$ROOT/tools" "$ROOT/core" "$ROOT/MANIFEST.json" "$repo/"
   ( cd "$repo" && git init -q && git add -A \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
   # Build the home-path leak at runtime so this test FILE never contains the
   # literal home-path prefix (which the repo's own scan would flag).
   home="/Users"
@@ -202,7 +202,7 @@ JSON
   repo="$TMP/gitclean"; mkdir -p "$repo"
   cp -R "$ROOT/tools" "$ROOT/core" "$ROOT/MANIFEST.json" "$repo/"
   ( cd "$repo" && git init -q && git add -A \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
   printf 'nothing to see here\n' > "$repo/ok.md"
   run bash "$repo/tools/check"
   [ "$status" -eq 0 ]
@@ -242,7 +242,7 @@ JSON
     | sort -u > "$TMP/metadata-repo-targets"
   while IFS= read -r target; do
     printf '%s\n' "${target#"$app"/}"
-  done < <(polaris_repo_adapter_targets "$app") | sort -u > "$TMP/helper-repo-targets"
+  done < <(sentinel_repo_adapter_targets "$app") | sort -u > "$TMP/helper-repo-targets"
 
   run diff -u "$TMP/metadata-repo-targets" "$TMP/helper-repo-targets"
   [ "$status" -eq 0 ]
@@ -298,7 +298,7 @@ JSON
   vendor="$TMP/vendor-missing-optional"; mkdir -p "$vendor"
   cp -R "$ROOT/core" "$ROOT/MANIFEST.json" "$vendor/"
   rm "$vendor/core/ADAPTERS.md"
-  run scan "polaris_check_core '$vendor/core' '$vendor/MANIFEST.json'"
+  run scan "sentinel_check_core '$vendor/core' '$vendor/MANIFEST.json'"
   [ "$status" -ne 0 ]
   [[ "$output" == *"missing optional core file: core/ADAPTERS.md"* ]]
 }
@@ -307,7 +307,7 @@ JSON
   vendor="$TMP/vendor-core-arg"; mkdir -p "$vendor"
   cp -R "$ROOT/core" "$ROOT/MANIFEST.json" "$vendor/"
   mkdir -p "$vendor/not-core"
-  run scan "polaris_check_core '$vendor/not-core' '$vendor/MANIFEST.json'"
+  run scan "sentinel_check_core '$vendor/not-core' '$vendor/MANIFEST.json'"
   [ "$status" -ne 0 ]
   [[ "$output" == *"core_dir argument does not match manifest core_dir 'core'"* ]]
 }
@@ -317,7 +317,7 @@ JSON
   cat > "$vendor/MANIFEST.json" <<'JSON'
 {
   "schema_version": 1,
-  "name": "polaris",
+  "name": "sentinel",
   "core_dir": "core",
   "required_core_read_order": ["../outside.md"],
   "optional_core_files": [],
@@ -325,21 +325,21 @@ JSON
   "render_budget_bytes": 32768
 }
 JSON
-  run scan "polaris_check_manifest_paths '$vendor/MANIFEST.json'"
+  run scan "sentinel_check_manifest_paths '$vendor/MANIFEST.json'"
   [ "$status" -ne 0 ]
   [[ "$output" == *"unsafe path segment"* ]]
 }
 
 @test "scan: a private hit reports a line number (location, not just file)" {
   printf 'a\nb SECRETPROJ here\n' > "$TMP/loc.md"
-  run scan "polaris_scan_terms '$FM' '$TMP/loc.md'"
+  run scan "sentinel_scan_terms '$FM' '$TMP/loc.md'"
   [ "$status" -eq 1 ]
   [[ "$output" == *"loc.md:2"* ]]
 }
 
 @test "scan: a pure-word term does not trip a longer word containing it" {
   printf 'the GENPATHological edge case\n' > "$TMP/wb.md"
-  run scan "polaris_scan_terms '$FM' '$TMP/wb.md'"
+  run scan "sentinel_scan_terms '$FM' '$TMP/wb.md'"
   [ "$status" -eq 0 ]
 }
 
@@ -377,7 +377,7 @@ JSON
 @test "verify-vendor: expected hash is required unless structure-only is explicit" {
   vendor="$TMP/vendor-verify"; mkdir -p "$vendor"
   cp -R "$ROOT/core" "$ROOT/MANIFEST.json" "$vendor/"
-  expected="$(polaris_bundle_sha256 "$vendor/core" "$vendor/MANIFEST.json")"
+  expected="$(sentinel_bundle_sha256 "$vendor/core" "$vendor/MANIFEST.json")"
 
   run bash "$ROOT/tools/verify-vendor" "$vendor"
   [ "$status" -eq 2 ]
@@ -396,7 +396,7 @@ JSON
   make_release_fixture
   sed 's/bundle-sha256:.*/bundle-sha256:** `0000000000000000000000000000000000000000000000000000000000000000`/' "$rel/CHANGELOG.md" > "$rel/CHANGELOG.md.t"
   mv "$rel/CHANGELOG.md.t" "$rel/CHANGELOG.md"
-  ( cd "$rel" && git add CHANGELOG.md && git -c user.email=ci@polaris.test -c user.name=ci commit -qm bad-hash )
+  ( cd "$rel" && git add CHANGELOG.md && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm bad-hash )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md bundle-sha256 mismatch"* ]]
@@ -413,7 +413,7 @@ JSON
 **bundle-sha256:** \`$rel_sha\`
 EOF
   ( cd "$rel" && git add CHANGELOG.md VERSION \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm wrong-section )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm wrong-section )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
@@ -430,7 +430,7 @@ EOF
 **bundle-sha256:** \`$rel_sha\`
 EOF
   ( cd "$rel" && git add CHANGELOG.md VERSION \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm bad-version )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm bad-version )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"VERSION must be SemVer x.y.z"* ]]
@@ -449,7 +449,7 @@ EOF
 \`\`\`
 EOF
   ( cd "$rel" && git add CHANGELOG.md VERSION \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm fenced-heading )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm fenced-heading )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
@@ -470,7 +470,7 @@ EOF
 \`\`\`\`
 EOF
   ( cd "$rel" && git add CHANGELOG.md VERSION \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm nested-fence-heading )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm nested-fence-heading )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md has no section for version 1.2.3"* ]]
@@ -485,7 +485,7 @@ EOF
 **bundle-sha256:** \`$rel_sha\`
 EOF
   ( cd "$rel" && git add CHANGELOG.md \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm duplicate-section )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm duplicate-section )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md has multiple sections for version 0.1.0"* ]]
@@ -497,7 +497,7 @@ EOF
 **bundle-sha256:** \`0000000000000000000000000000000000000000000000000000000000000000\`
 EOF
   ( cd "$rel" && git add CHANGELOG.md \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm duplicate-hash )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm duplicate-hash )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md section for 0.1.0 has multiple bundle-sha256 entries"* ]]
@@ -509,7 +509,7 @@ EOF
     "$rel/CHANGELOG.md" > "$rel/CHANGELOG.md.t"
   mv "$rel/CHANGELOG.md.t" "$rel/CHANGELOG.md"
   ( cd "$rel" && git add CHANGELOG.md \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm duplicate-same-line-hash )
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm duplicate-same-line-hash )
   run bash "$rel/tools/release-check"
   [ "$status" -ne 0 ]
   [[ "$output" == *"CHANGELOG.md section for 0.1.0 has multiple bundle-sha256 entries"* ]]
@@ -596,7 +596,7 @@ EOF
   git init --bare -q "$remote"
   mkdir -p "$seed"
   ( cd "$seed" && git init -q && printf 'seed\n' > README.md && git add README.md \
-      && git -c user.email=ci@polaris.test -c user.name=ci commit -qm seed \
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm seed \
       && git tag "v$(tr -d ' \r\n' < "$rel/VERSION")" \
       && git remote add origin "$remote" && git push -q origin --tags )
   ( cd "$rel" && git remote add origin "$remote" )
@@ -669,11 +669,11 @@ EOF
 
 @test "install.ps1 write preserves surrounding text and cleans temp files" {
   if ! command -v pwsh >/dev/null 2>&1; then
-    if [ "${POLARIS_STRICT:-0}" = 1 ]; then
+    if [ "${SENTINEL_STRICT:-0}" = 1 ]; then
       echo "pwsh is REQUIRED in strict mode (amd64 Windows-parity coverage); not installed."
       return 1
     fi
-    skip "pwsh not installed (set POLARIS_STRICT=1 to require it)"
+    skip "pwsh not installed (set SENTINEL_STRICT=1 to require it)"
   fi
   app="$TMP/ps-atomic"; mkdir -p "$app"
   printf '# Mine\nkeep this\n' > "$app/AGENTS.md"
@@ -681,17 +681,17 @@ EOF
   run pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Target "$app"
   [ "$status" -eq 0 ]
   grep -q 'keep this' "$app/AGENTS.md"
-  run find "$app" -name '.polaris.*' -print
+  run find "$app" -name '.sentinel.*' -print
   [ "$output" = "" ]
 }
 
 @test "install.ps1 refuses malformed blocks without changing the file" {
   if ! command -v pwsh >/dev/null 2>&1; then
-    if [ "${POLARIS_STRICT:-0}" = 1 ]; then
+    if [ "${SENTINEL_STRICT:-0}" = 1 ]; then
       echo "pwsh is REQUIRED in strict mode (amd64 Windows-parity coverage); not installed."
       return 1
     fi
-    skip "pwsh not installed (set POLARIS_STRICT=1 to require it)"
+    skip "pwsh not installed (set SENTINEL_STRICT=1 to require it)"
   fi
   app="$TMP/ps-malformed"; mkdir -p "$app"
   printf '<!-- AGENT-RULES:BEGIN x -->\nstale body\n# KEEP ME\n' > "$app/CLAUDE.md"
@@ -700,7 +700,7 @@ EOF
   run pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Target "$app"
   [ "$status" -ne 0 ]
   [ "$(cat "$app/CLAUDE.md")" = "$before" ]
-  run find "$app" -name '.polaris.*' -print
+  run find "$app" -name '.sentinel.*' -print
   [ "$output" = "" ]
 }
 
@@ -710,11 +710,11 @@ EOF
 # on. A coincidentally-missing pwsh must FAIL loudly here, never silently skip.
 @test "install.ps1 renders byte-identical to the bash installer (amd64 parity)" {
   if ! command -v pwsh >/dev/null 2>&1; then
-    if [ "${POLARIS_STRICT:-0}" = 1 ]; then
+    if [ "${SENTINEL_STRICT:-0}" = 1 ]; then
       echo "pwsh is REQUIRED in strict mode (amd64 Windows-parity coverage); not installed."
       return 1
     fi
-    skip "pwsh not installed (set POLARIS_STRICT=1 to require it)"
+    skip "pwsh not installed (set SENTINEL_STRICT=1 to require it)"
   fi
   a="$TMP/psa"; b="$TMP/psb"; mkdir -p "$a" "$b"
   bash "$ROOT/tools/install" --target "$a" >/dev/null
@@ -726,11 +726,11 @@ EOF
 
 @test "install.ps1 --check agrees the committed entrypoints are drift-free (amd64 parity)" {
   if ! command -v pwsh >/dev/null 2>&1; then
-    if [ "${POLARIS_STRICT:-0}" = 1 ]; then
+    if [ "${SENTINEL_STRICT:-0}" = 1 ]; then
       echo "pwsh is REQUIRED in strict mode (amd64 Windows-parity coverage); not installed."
       return 1
     fi
-    skip "pwsh not installed (set POLARIS_STRICT=1 to require it)"
+    skip "pwsh not installed (set SENTINEL_STRICT=1 to require it)"
   fi
   run pwsh -NoProfile -File "$ROOT/tools/install.ps1" -Check
   [ "$status" -eq 0 ]

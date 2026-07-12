@@ -1,8 +1,8 @@
-# Polaris Adapter Rules
+# Sentinel Adapter Rules
 
 Tool-specific instruction files are adapters, not independent policy sources.
 
-By default, adapters **inline** the rendered Polaris contract into each tool's
+By default, adapters **inline** the rendered Sentinel contract into each tool's
 native auto-loaded entrypoint, so the rules reach the model at startup with no
 tool call and no slash command. Pointing at a separate file is a fallback only
 where a tool reliably expands file references; most do not. Adapters must not

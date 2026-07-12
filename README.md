@@ -1,8 +1,8 @@
-# Polaris
+# Sentinel
 
 **One set of engineering rules that every AI coding assistant follows automatically, in every repo.**
 
-Polaris is a small, language-agnostic rulebook for AI coding tools (Claude Code,
+Sentinel is a small, language-agnostic rulebook for AI coding tools (Claude Code,
 Codex, GitHub Copilot, opencode, Pi CLI). You install it once and the rules load
 themselves at startup — no slash command, no "please read the docs," no copy-paste.
 
@@ -23,8 +23,8 @@ writes the rules into that file. That's the whole trick.
 ## Get it
 
 ```bash
-git clone https://github.com/luisgui1757/polaris.git
-cd polaris
+git clone https://github.com/luisgui1757/sentinel.git
+cd sentinel
 ```
 
 Run everything below from that checkout. (Prefer to vendor a pinned copy instead
@@ -34,7 +34,7 @@ of installing? See [`consumers.md`](consumers.md).)
 
 ## Use it
 
-> Run these from your Polaris checkout — the commands use the repo-relative
+> Run these from your Sentinel checkout — the commands use the repo-relative
 > `tools/install` (or `make install`). **On Windows**, use the PowerShell port,
 > which behaves identically and renders byte-for-byte the same block:
 > `pwsh tools/install.ps1 -Target C:\path\to\repo` (`-Global`, `-Check`,
@@ -57,7 +57,7 @@ tools/install --global
 ```
 
 Writes the rules into your home config once. Now **every** repo you open — even
-ones that never heard of Polaris — carries the rules. (Per-machine; not shared.)
+ones that never heard of Sentinel — carries the rules. (Per-machine; not shared.)
 
 ### 3. Change the rules
 
@@ -95,14 +95,14 @@ The canonical tool/adapter metadata lives in
 [`docs/tool-ingestion.md`](docs/tool-ingestion.md) records the source evidence
 behind each dated status.
 
-A repo can add its own rules *around* the Polaris block — re-running install only
+A repo can add its own rules *around* the Sentinel block — re-running install only
 touches the block, never your text.
 
 ---
 
 ## Privacy
 
-Polaris is meant to be shareable, so it must never leak your private projects.
+Sentinel is meant to be shareable, so it must never leak your private projects.
 `make check` scans the whole repo and **fails** if a private term or home path
 slips in, reporting the location without ever printing the term. The shipped
 files only ever contain generic patterns (home paths); your *own* private project

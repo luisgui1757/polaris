@@ -1,6 +1,6 @@
-# Polaris Threat Model
+# Sentinel Threat Model
 
-Polaris exists to be *shared* — its rules propagate into every repo and, when
+Sentinel exists to be *shared* — its rules propagate into every repo and, when
 installed globally, into a developer's home configuration. Its one security
 promise is **privacy**: nothing private about the author or their other projects
 may leak into a tree meant to be published. This document states that guarantee
@@ -12,9 +12,9 @@ precisely — what it covers, what it does not, and why.
    product names, internal domains, locale or jargon terms.
 2. **Machine-local paths** — absolute home directories and the like.
 3. **Rule integrity** — a consumer must be able to trust that the rules it
-   inlined are a known, unmodified Polaris release.
+   inlined are a known, unmodified Sentinel release.
 
-Polaris holds no credentials, tokens, or user data; those are not its assets. It
+Sentinel holds no credentials, tokens, or user data; those are not its assets. It
 is a rules repository.
 
 ## Trust boundary
@@ -22,7 +22,7 @@ is a rules repository.
 - **Trusted:** the author's machine, where the gitignored private denylist
   (`tools/forbidden-terms.local`) lives.
 - **Published / untrusted:** the committed tree, the GitHub repo, CI logs, and
-  any consumer that vendors or installs Polaris.
+  any consumer that vendors or installs Sentinel.
 
 The boundary is the **commit**: anything that crosses into the committed tree is
 treated as public forever (history is not erasable in practice).
@@ -37,7 +37,7 @@ model for an author exfiltrating their own secrets. Failure modes:
   generated adapter, the manifest, or even a file *name*.
 - **Diagnostic leak**: the scanner itself echoes a private term into a terminal
   or a public CI log while reporting a hit.
-- **Supply-chain drift**: a consumer runs a partial, stale, or modified Polaris
+- **Supply-chain drift**: a consumer runs a partial, stale, or modified Sentinel
   while believing it pinned a known release.
 
 ## Controls
@@ -67,7 +67,7 @@ model for an author exfiltrating their own secrets. Failure modes:
 - **Unknown secrets.** The scan matches *known* strings (generic patterns + your
   denylist). A brand-new private term you have not added will pass. The denylist
   is a memory, not a classifier — keep it current. For secret *shapes* (tokens,
-  keys) Polaris already integrates **gitleaks** in CI (the `lint` job gated by
+  keys) Sentinel already integrates **gitleaks** in CI (the `lint` job gated by
   `ci`, scanning full history); note gitleaks matches known secret shapes, not
   your private-term denylist — the two are complementary.
 - **Encoded / transformed content.** A private term that is base64'd, hashed, or

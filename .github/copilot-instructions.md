@@ -1,5 +1,5 @@
 > **Generated file** — the block below is rendered from `core/` by `tools/install`.
-> Don't edit it here. To work on the Polaris repo itself, start at the repo root's
+> Don't edit it here. To work on the Sentinel repo itself, start at the repo root's
 > `README.md` and `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
 
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->

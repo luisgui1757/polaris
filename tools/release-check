@@ -7,8 +7,8 @@ export LC_ALL=C
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO_ROOT"
-# shellcheck source=polaris-lib.sh
-source "$SCRIPT_DIR/polaris-lib.sh"
+# shellcheck source=sentinel-lib.sh
+source "$SCRIPT_DIR/sentinel-lib.sh"
 
 ver=$(tr -d ' \r\n' < VERSION 2>/dev/null || true)
 [[ -n "$ver" ]] || { echo "release-check: empty or missing VERSION" >&2; exit 1; }
@@ -111,8 +111,8 @@ elif [[ "$section_status" -ne 0 ]]; then
 fi
 echo "release-check: VERSION=${ver} has a CHANGELOG entry."
 
-manifest_core_dir=$(polaris_manifest_core_dir MANIFEST.json)
-sha=$(polaris_bundle_sha256 "$REPO_ROOT/$manifest_core_dir" MANIFEST.json)
+manifest_core_dir=$(sentinel_manifest_core_dir MANIFEST.json)
+sha=$(sentinel_bundle_sha256 "$REPO_ROOT/$manifest_core_dir" MANIFEST.json)
 changelog_sha=""
 changelog_sha_count=0
 while IFS= read -r line; do
@@ -158,7 +158,7 @@ echo "release-check: release candidate commit ${commit} for v${ver}."
 
 # A release gate runs STRICT: every linter and the regression suite must actually
 # run -- a missing tool is a failure, never a silent skip.
-export POLARIS_STRICT=1
+export SENTINEL_STRICT=1
 
 # Adapters in sync + full gate (leak scan + render + drift + lint + shellcheck).
 bash tools/install --check

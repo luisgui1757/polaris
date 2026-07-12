@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "polaris",
+  "name": "sentinel",
   "description": "Reusable operating contract for AI coding assistants.",
   "core_dir": "core",
   "required_core_read_order": [

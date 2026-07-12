@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Semantic verifier for Polaris's required main-branch GitHub rulesets.
+# Semantic verifier for Sentinel's required main-branch GitHub rulesets.
 #
 # Defaults to checking the checked-in .github/rulesets/*.json files. With
 # --repo owner/name it fetches the live GitHub rulesets read-only via gh first,
@@ -19,7 +19,7 @@ usage() {
 ruleset-check [--ruleset-dir DIR] [--owner-id ID]
 ruleset-check --repo owner/repo [--owner-id ID]
 
-Verifies the semantic contract for Polaris's main-branch rulesets:
+Verifies the semantic contract for Sentinel's main-branch rulesets:
   - three active branch rulesets targeting refs/heads/main
   - owner User bypass in always mode
   - integrity ruleset: PR required, squash-only, strict required ci from the

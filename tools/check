@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Polaris check CLI.
+# Sentinel check CLI.
 #
-# Verifies the Polaris core against MANIFEST.json (structure + a lightweight
+# Verifies the Sentinel core against MANIFEST.json (structure + a lightweight
 # manifest validation) and runs a privacy leak scan over the WHOLE working tree
 # -- tracked AND not-yet-tracked files, minus only gitignored files -- plus the
 # path NAMES themselves and the manifest. A private term or absolute home path
 # anywhere is caught; private hits are redacted (location only). Finally it
 # enforces the injected-bundle byte budget.
 #
-# The generic, consumer-reusable half lives in tools/polaris-lib.sh. Consumers
+# The generic, consumer-reusable half lives in tools/sentinel-lib.sh. Consumers
 # source that and add their own overlay-aware checks; they do not reimplement
 # this CLI.
 set -euo pipefail
@@ -17,28 +17,28 @@ export LC_ALL=C   # byte-wise, locale-independent matching/sorting -> reproducib
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
-# shellcheck source=polaris-lib.sh
-source "$SCRIPT_DIR/polaris-lib.sh"
+# shellcheck source=sentinel-lib.sh
+source "$SCRIPT_DIR/sentinel-lib.sh"
 
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
+CORE="$REPO_ROOT/$(sentinel_manifest_core_dir "$MANIFEST")"
 status=0
 
 # 1. Core structure + core-directory term scan.
-polaris_check_core "$CORE" "$MANIFEST" || status=1
+sentinel_check_core "$CORE" "$MANIFEST" || status=1
 
 # 2. Fast manifest sanity pass (jq only; no-op without jq). The CANONICAL schema
 #    (schemas/manifest.schema.json) is enforced separately and strictly by the
 #    lint gate via check-jsonschema; this is the dependency-free first line.
-if _polaris_have_jq; then
+if _sentinel_have_jq; then
   if ! jq -e '
         (.schema_version | type == "number")
-        and (.name == "polaris")
+        and (.name == "sentinel")
         and (.required_core_read_order | type == "array")
         and (.forbidden_core_terms | type == "array")
         and ((.render_budget_bytes // 0) | (type == "number" and . == floor))
       ' "$MANIFEST" >/dev/null 2>&1; then
-    echo "polaris: MANIFEST.json failed validation (schema_version/name/arrays/budget types)." >&2
+    echo "sentinel: MANIFEST.json failed validation (schema_version/name/arrays/budget types)." >&2
     status=1
   fi
 fi
@@ -67,12 +67,12 @@ for f in ${rel_paths[@]+"${rel_paths[@]}"}; do
   content_paths+=("$REPO_ROOT/$f")
 done
 if ((${#content_paths[@]})); then
-  polaris_scan_terms "$MANIFEST" "${content_paths[@]}" || status=1
+  sentinel_scan_terms "$MANIFEST" "${content_paths[@]}" || status=1
 fi
 
 # 4b. Path-name scan: a private term in a file/dir NAME itself.
 if ((${#rel_paths[@]})); then
-  polaris_scan_pathnames "$MANIFEST" "${rel_paths[@]}" || status=1
+  sentinel_scan_pathnames "$MANIFEST" "${rel_paths[@]}" || status=1
 fi
 
 # 5. Scan the manifest for leaks. It legitimately DECLARES the generic terms in
@@ -84,7 +84,7 @@ fi
 #          anywhere, including one wrongly dropped inside that array.
 if [[ -f "$MANIFEST" ]]; then
   proj=$(mktemp)
-  if _polaris_have_jq; then
+  if _sentinel_have_jq; then
     # Structural removal of the term-declaration array (robust to ']'-in-string
     # and single-line manifests). On a malformed manifest jq fails -> empty
     # projection (nothing to scan); the validation + render guards catch that.
@@ -100,26 +100,26 @@ if [[ -f "$MANIFEST" ]]; then
       { print }
     ' "$MANIFEST" > "$proj"
   fi
-  polaris_scan_terms "$MANIFEST" "$proj" || status=1
-  polaris_scan_terms "$MANIFEST" --private "$MANIFEST" || status=1
+  sentinel_scan_terms "$MANIFEST" "$proj" || status=1
+  sentinel_scan_terms "$MANIFEST" --private "$MANIFEST" || status=1
   rm -f "$proj"
 fi
 
 # 6. Injected-bundle budget: FAIL over budget, warn at >=75%.
-budget=$(polaris_manifest_int "$MANIFEST" render_budget_bytes || true)
+budget=$(sentinel_manifest_int "$MANIFEST" render_budget_bytes || true)
 if [[ -n "${budget:-}" ]] && [[ "$budget" =~ ^[0-9]+$ ]] && (( budget > 0 )); then
-  size=$(polaris_render_bundle "$CORE" "$MANIFEST" | wc -c | tr -d ' ')
+  size=$(sentinel_render_bundle "$CORE" "$MANIFEST" | wc -c | tr -d ' ')
   if (( size > budget )); then
-    echo "polaris: ERROR: injected bundle is ${size}B > render_budget_bytes ${budget}B. Trim core/." >&2
+    echo "sentinel: ERROR: injected bundle is ${size}B > render_budget_bytes ${budget}B. Trim core/." >&2
     status=1
   elif (( size * 100 / budget >= 75 )); then
-    echo "polaris: WARNING: injected bundle is ${size}B, >=75% of the ${budget}B budget." >&2
+    echo "sentinel: WARNING: injected bundle is ${size}B, >=75% of the ${budget}B budget." >&2
   fi
 fi
 
 if [[ "$status" -eq 0 ]]; then
-  echo "polaris: core check passed."
+  echo "sentinel: core check passed."
 else
-  echo "polaris: core check FAILED." >&2
+  echo "sentinel: core check FAILED." >&2
   exit 1
 fi
