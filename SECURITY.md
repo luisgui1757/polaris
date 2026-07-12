@@ -9,7 +9,14 @@ documented limits.
 Report a suspected leak, or a flaw in the leak scanner, **privately** to the
 maintainer — open a private GitHub security advisory, or contact the owner
 directly. Do NOT open a public issue that itself contains the leaked private
-term.
+term. Private vulnerability reporting is enabled on GitHub so the repository's
+**Security and quality → Advisories → Report a vulnerability** flow is the
+preferred channel.
+
+GitHub also runs secret scanning with push protection, CodeQL analysis of the
+Actions workflow, Dependabot security updates, and dependency review. These
+hosted controls complement the repository's full-history Gitleaks scan and
+strict cross-platform `ci` gate; they do not replace either one.
 
 ## Scope
 

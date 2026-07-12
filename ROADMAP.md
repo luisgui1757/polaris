@@ -73,6 +73,29 @@ Verification after the repair:
   drift proof.
 - `git diff --check` passed.
 
+## GitHub security automation snapshot - 2026-07-12
+
+Status: shipped on `chore/security-quality-hardening`.
+
+- CodeQL default setup scans the GitHub Actions source on pull requests, pushes
+  to `main`, and weekly; its initial default-setup run passed.
+- Private vulnerability reporting is enabled and matches `SECURITY.md`'s
+  private-disclosure contract.
+- Dependabot checks pinned GitHub Actions weekly.
+- Dependency review runs on pull requests and feeds the stable required `ci`
+  aggregate; non-pull-request runs complete explicitly so the aggregate never
+  receives a skipped prerequisite.
+- Secret validity checks are intentionally not listed as enabled: GitHub limits
+  them to organization-owned GitHub Team repositories with Secret Protection,
+  so they are unavailable to this personal GitHub Pro repository.
+
+Verification:
+
+- Focused dependency-review gate regression passed: 1/1 bats test.
+- `make gate` passed with the strict toolchain: schema validation, all linters,
+  ShellCheck, 58/58 bats tests, and PowerShell adapter parity.
+- `git diff --check` passed.
+
 ## Now (owner actions)
 
 - **Run `make install-global` if desired** to carry the rules into every repo on
