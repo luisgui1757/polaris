@@ -636,6 +636,16 @@ EOF
   [[ "$output" == *"required status checks require only GitHub Actions ci"* ]]
 }
 
+@test "GitHub ci gate requires the pinned dependency review job" {
+  workflow="$ROOT/.github/workflows/ci.yml"
+
+  grep -Fq \
+    'uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294' \
+    "$workflow"
+  grep -Fq 'needs: [test, lint, windows, dependency_review]' "$workflow"
+  grep -Fq 'needs.dependency_review.result' "$workflow"
+}
+
 @test "ruleset-check: rejects duplicate or unknown rule types" {
   if ! command -v jq >/dev/null 2>&1; then
     skip "jq not installed"

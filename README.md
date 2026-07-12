@@ -154,9 +154,12 @@ requires the strict local toolchain, including `pwsh`.
 
 GitHub's required `ci` context is stronger than local preflight: the workflow
 runs Linux + macOS preflight and `make test`, a strict lint job with every
-linter installed, and a native **Windows (amd64)** PowerShell installer check.
-`main` is protected by the rulesets in `.github/rulesets/` (squash-only,
-required `ci` check, linear history).
+linter installed, a native **Windows (amd64)** PowerShell installer check, and
+dependency review on pull requests. CodeQL default setup separately scans the
+GitHub Actions source on pull requests, pushes to `main`, and weekly. Dependabot
+checks pinned GitHub Actions weekly, while GitHub secret scanning and push
+protection guard supported credentials. `main` is protected by the rulesets in
+`.github/rulesets/` (squash-only, required `ci` check, linear history).
 
 `ROADMAP.md` tracks remaining work and is deleted once the repo matures.
 
