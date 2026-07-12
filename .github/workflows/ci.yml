@@ -41,14 +41,14 @@ jobs:
       - name: Tooling tests (bats)
         run: make test
         env:
-          POLARIS_STRICT: "1"   # the suite MUST run here; a missing bats fails, never skips
+          SENTINEL_STRICT: "1"   # the suite MUST run here; a missing bats fails, never skips
 
   lint:
     name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      POLARIS_STRICT: "1"   # every linter must run; a missing one fails the gate
+      SENTINEL_STRICT: "1"   # every linter must run; a missing one fails the gate
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
         with:

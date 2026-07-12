@@ -1,6 +1,6 @@
-# Polaris Bootstrap
+# Sentinel Bootstrap
 
-Use this bootstrap when a repository vendors Polaris.
+Use this bootstrap when a repository vendors Sentinel.
 
 1. Read the repository entrypoint first.
 2. Read the vendored `<vendor>/MANIFEST.json`.
@@ -8,7 +8,7 @@ Use this bootstrap when a repository vendors Polaris.
 4. Read the repository overlay and task-specific instructions.
 5. Apply the active mode before editing, testing, or reporting.
 
-Polaris is a baseline, not the final authority. A repository overlay may
+Sentinel is a baseline, not the final authority. A repository overlay may
 specialize or tighten these rules for its own domain, data model, commands,
 review ledgers, or release process. Relaxing a baseline rule requires an
 explicit, documented justification for that scope — never a silent override.

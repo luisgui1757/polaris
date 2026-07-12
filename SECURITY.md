@@ -1,6 +1,6 @@
 # Security Policy
 
-Polaris is a rules repository; its security surface is **privacy**. See
+Sentinel is a rules repository; its security surface is **privacy**. See
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for the precise guarantee and its
 documented limits.
 

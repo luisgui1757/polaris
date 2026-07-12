@@ -1,34 +1,34 @@
 #!/usr/bin/env bash
-# Polaris generic library.
+# Sentinel generic library.
 #
-# This file is the GENERIC half of Polaris tooling. It operates only on a
-# Polaris core directory plus its MANIFEST.json and knows nothing about any
+# This file is the GENERIC half of Sentinel tooling. It operates only on a
+# Sentinel core directory plus its MANIFEST.json and knows nothing about any
 # consuming repository's overlay paths. Consumers `source` this file and add
 # their own overlay-aware checks on top, so the generic checks are never
 # copy-pasted into each consumer.
 #
 # Usage:
-#   source "<vendor>/tools/polaris-lib.sh"
-#   polaris_check_core    "<core_dir>" "<manifest.json>"   # returns 0/1
-#   polaris_render_core   "<core_dir>" "<manifest.json>"   # human-readable dump
-#   polaris_render_bundle "<core_dir>" "<manifest.json>"   # inlinable contract
-#   polaris_core_files    "<manifest.json>" [required|all] # prints rel paths
-#   polaris_forbidden_terms "<manifest.json>"              # tagged term list
-#   polaris_scan_terms    "<manifest.json>" <path...>      # leak scan (0/1)
+#   source "<vendor>/tools/sentinel-lib.sh"
+#   sentinel_check_core    "<core_dir>" "<manifest.json>"   # returns 0/1
+#   sentinel_render_core   "<core_dir>" "<manifest.json>"   # human-readable dump
+#   sentinel_render_bundle "<core_dir>" "<manifest.json>"   # inlinable contract
+#   sentinel_core_files    "<manifest.json>" [required|all] # prints rel paths
+#   sentinel_forbidden_terms "<manifest.json>"              # tagged term list
+#   sentinel_scan_terms    "<manifest.json>" <path...>      # leak scan (0/1)
 #
 # The functions are pure shell + a JSON reader; no jq dependency.
 
 # Whether jq is available for correct, spec-compliant JSON parsing.
-_polaris_have_jq() { command -v jq >/dev/null 2>&1; }
+_sentinel_have_jq() { command -v jq >/dev/null 2>&1; }
 
 # Read a top-level string scalar from a JSON file.
 # Prefers jq (decodes JSON escapes, so a doubly-escaped Windows path becomes the
 # real one); falls back to a pure-sed reader so the library has no hard dependency.
-# polaris_manifest_value <file> <key>
-polaris_manifest_value() {
+# sentinel_manifest_value <file> <key>
+sentinel_manifest_value() {
   local file=$1 key=$2
   [[ -f "$file" ]] || return 1
-  if _polaris_have_jq; then
+  if _sentinel_have_jq; then
     jq -r --arg k "$key" 'if (has($k) and ((.[$k]|type) == "string")) then .[$k] else empty end' "$file" 2>/dev/null | head -n1
     return
   fi
@@ -36,11 +36,11 @@ polaris_manifest_value() {
 }
 
 # Read a top-level integer scalar from a JSON file.
-# polaris_manifest_int <file> <key>
-polaris_manifest_int() {
+# sentinel_manifest_int <file> <key>
+sentinel_manifest_int() {
   local file=$1 key=$2
   [[ -f "$file" ]] || return 1
-  if _polaris_have_jq; then
+  if _sentinel_have_jq; then
     jq -r --arg k "$key" 'if (has($k) and ((.[$k]|type) == "number")) then .[$k] else empty end' "$file" 2>/dev/null | head -n1
     return
   fi
@@ -50,11 +50,11 @@ polaris_manifest_int() {
 # Print the entries of a top-level JSON string array, one per line. With jq the
 # values are correctly JSON-decoded (escapes resolved, a "]" inside a string is
 # safe); the pure-awk fallback handles the common case with no dependency.
-# polaris_manifest_array <file> <key>
-polaris_manifest_array() {
+# sentinel_manifest_array <file> <key>
+sentinel_manifest_array() {
   local file=$1 key=$2
   [[ -f "$file" ]] || return 1
-  if _polaris_have_jq; then
+  if _sentinel_have_jq; then
     jq -r --arg k "$key" '(.[$k] // []) | if type == "array" then .[] else empty end' "$file" 2>/dev/null
     return
   fi
@@ -88,55 +88,55 @@ polaris_manifest_array() {
 # Validate a manifest-owned repo path. Paths are stored as POSIX-style repo
 # paths, so absolute paths, parent traversal, empty segments, and backslashes are
 # not portable and are not allowed.
-_polaris_validate_relpath() {
+_sentinel_validate_relpath() {
   local label=$1 rel=$2
   if [[ -z "$rel" ]]; then
-    echo "polaris: $label must not be empty" >&2
+    echo "sentinel: $label must not be empty" >&2
     return 1
   fi
   case "$rel" in
-    /*|*\\*|*'//'|*:*) echo "polaris: $label must be a contained repo-relative POSIX path: $rel" >&2; return 1 ;;
+    /*|*\\*|*'//'|*:*) echo "sentinel: $label must be a contained repo-relative POSIX path: $rel" >&2; return 1 ;;
   esac
   local old_ifs=$IFS part
   IFS=/
   for part in $rel; do
     case "$part" in
-      ""|"."|"..") IFS=$old_ifs; echo "polaris: $label contains an unsafe path segment: $rel" >&2; return 1 ;;
+      ""|"."|"..") IFS=$old_ifs; echo "sentinel: $label contains an unsafe path segment: $rel" >&2; return 1 ;;
     esac
   done
   IFS=$old_ifs
 }
 
 # Read and validate the manifest's core_dir.
-# polaris_manifest_core_dir <manifest>
-polaris_manifest_core_dir() {
+# sentinel_manifest_core_dir <manifest>
+sentinel_manifest_core_dir() {
   local manifest=$1 core_dir
-  core_dir=$(polaris_manifest_value "$manifest" core_dir)
-  [[ -n "$core_dir" ]] || { echo "polaris: manifest missing core_dir" >&2; return 1; }
-  _polaris_validate_relpath core_dir "$core_dir" || return 1
+  core_dir=$(sentinel_manifest_value "$manifest" core_dir)
+  [[ -n "$core_dir" ]] || { echo "sentinel: manifest missing core_dir" >&2; return 1; }
+  _sentinel_validate_relpath core_dir "$core_dir" || return 1
   printf '%s\n' "$core_dir"
 }
 
 # List core files relative to the manifest root.
-# polaris_core_files <manifest> [required|all]   (default: all)
-polaris_core_files() {
+# sentinel_core_files <manifest> [required|all]   (default: all)
+sentinel_core_files() {
   local manifest=$1 scope=${2:-all}
-  polaris_manifest_array "$manifest" required_core_read_order
+  sentinel_manifest_array "$manifest" required_core_read_order
   if [[ "$scope" == "all" ]]; then
-    polaris_manifest_array "$manifest" optional_core_files
+    sentinel_manifest_array "$manifest" optional_core_files
   fi
 }
 
 # Validate manifest path containment and declared file presence.
-# polaris_check_manifest_paths <manifest>
-polaris_check_manifest_paths() {
+# sentinel_check_manifest_paths <manifest>
+sentinel_check_manifest_paths() {
   local manifest=$1 base core_dir rel field label failed=0 required_seen=0 optional_seen=0
-  [[ -f "$manifest" ]] || { echo "polaris: missing manifest: $manifest" >&2; return 1; }
+  [[ -f "$manifest" ]] || { echo "sentinel: missing manifest: $manifest" >&2; return 1; }
   base=$(cd "$(dirname "$manifest")" && pwd)
-  core_dir=$(polaris_manifest_core_dir "$manifest") || failed=1
+  core_dir=$(sentinel_manifest_core_dir "$manifest") || failed=1
   if [[ -n "${core_dir:-}" ]]; then
     if [[ ! -d "$base/$core_dir" || -L "$base/$core_dir" ]]; then
-      echo "polaris: core_dir must be a real directory: $core_dir" >&2
+      echo "sentinel: core_dir must be a real directory: $core_dir" >&2
       failed=1
     fi
   fi
@@ -153,32 +153,32 @@ polaris_check_manifest_paths() {
       else
         optional_seen=1
       fi
-      _polaris_validate_relpath "$field" "$rel" || { failed=1; continue; }
+      _sentinel_validate_relpath "$field" "$rel" || { failed=1; continue; }
       if [[ -n "${core_dir:-}" && "$rel" != "$core_dir/"* ]]; then
-        echo "polaris: core file is outside core_dir '$core_dir': $rel" >&2
+        echo "sentinel: core file is outside core_dir '$core_dir': $rel" >&2
         failed=1
         continue
       fi
       if [[ ! -f "$base/$rel" || -L "$base/$rel" ]]; then
-        echo "polaris: missing $label core file: $rel" >&2
+        echo "sentinel: missing $label core file: $rel" >&2
         failed=1
       fi
-    done < <(polaris_manifest_array "$manifest" "$field")
+    done < <(sentinel_manifest_array "$manifest" "$field")
   done
 
   if [[ "$required_seen" -eq 0 ]]; then
-    echo "polaris: manifest required_core_read_order must list at least one core file" >&2
+    echo "sentinel: manifest required_core_read_order must list at least one core file" >&2
     failed=1
   fi
   if [[ "$optional_seen" -eq 0 ]]; then
-    echo "polaris: manifest optional_core_files must list optional core files" >&2
+    echo "sentinel: manifest optional_core_files must list optional core files" >&2
     failed=1
   fi
 
   local local_denylist
-  local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+  local_denylist=$(sentinel_manifest_value "$manifest" local_denylist)
   if [[ -n "$local_denylist" ]]; then
-    _polaris_validate_relpath local_denylist "$local_denylist" || failed=1
+    _sentinel_validate_relpath local_denylist "$local_denylist" || failed=1
   fi
 
   return "$failed"
@@ -193,21 +193,21 @@ polaris_check_manifest_paths() {
 # in the gitignored file named by the manifest "local_denylist" value, so the
 # committed tree never enumerates the owner's other projects. The local file is
 # resolved relative to the manifest directory and is absent in the public tree.
-# polaris_forbidden_terms <manifest> [all|M|L]   (default: all)
-polaris_forbidden_terms() {
+# sentinel_forbidden_terms <manifest> [all|M|L]   (default: all)
+sentinel_forbidden_terms() {
   local manifest=$1 filter=${2:-all} base term local_denylist
   base=$(cd "$(dirname "$manifest")" && pwd)
   if [[ "$filter" == all || "$filter" == M ]]; then
     while IFS= read -r term; do
       [[ -n "$term" ]] && printf 'M\t%s\n' "$term"
-    done < <(polaris_manifest_array "$manifest" forbidden_core_terms)
+    done < <(sentinel_manifest_array "$manifest" forbidden_core_terms)
   fi
   if [[ "$filter" == all || "$filter" == L ]]; then
-    local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+    local_denylist=$(sentinel_manifest_value "$manifest" local_denylist)
     # Default location if the manifest names none, so the private scan still
     # works when the manifest key is absent (or has been reverted).
     [[ -z "$local_denylist" ]] && local_denylist="tools/forbidden-terms.local"
-    _polaris_validate_relpath local_denylist "$local_denylist" || return 1
+    _sentinel_validate_relpath local_denylist "$local_denylist" || return 1
     if [[ -f "$base/$local_denylist" ]]; then
       # One term per line; strip "#" comments, blank lines, and surrounding space.
       sed -e 's/[[:space:]]*#.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
@@ -233,28 +233,28 @@ polaris_forbidden_terms() {
 #     (unreadable path, rc>=2) fails closed rather than reading as "clean".
 # Pass --private to scan for L-terms only (e.g. a file that legitimately declares
 # the generic terms, like the manifest).
-# polaris_scan_terms <manifest> [--private] <path...>
-polaris_scan_terms() {
+# sentinel_scan_terms <manifest> [--private] <path...>
+sentinel_scan_terms() {
   local manifest=$1; shift
   local filter=all local_denylist
   if [[ "${1:-}" == "--private" ]]; then filter=L; shift; fi
   [[ $# -gt 0 ]] || return 0
-  local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+  local_denylist=$(sentinel_manifest_value "$manifest" local_denylist)
   [[ -z "$local_denylist" ]] && local_denylist="tools/forbidden-terms.local"
-  _polaris_validate_relpath local_denylist "$local_denylist" || return 1
+  _sentinel_validate_relpath local_denylist "$local_denylist" || return 1
 
   # Collect every private term, then sort longest-first for safe masking.
   local lterms=() o t
   while IFS=$'\t' read -r o t; do
     [[ "$o" == L && -n "$t" ]] && lterms+=("$t")
-  done < <(polaris_forbidden_terms "$manifest" L)
+  done < <(sentinel_forbidden_terms "$manifest" L)
   if ((${#lterms[@]} > 1)); then
     local _sorted; _sorted=$(printf '%s\n' "${lterms[@]}" | awk '{print length"\t"$0}' | sort -rn | cut -f2-)
     lterms=(); while IFS= read -r t; do [[ -n "$t" ]] && lterms+=("$t"); done <<< "$_sorted"
   fi
 
   # Mask every private term (longest-first) out of a string.
-  _polaris_mask() {
+  _sentinel_mask() {
     local s=$1 lt
     if ((${#lterms[@]})); then for lt in "${lterms[@]}"; do s=${s//"$lt"/<REDACTED>}; done; fi
     printf '%s' "$s"
@@ -269,23 +269,23 @@ polaris_scan_terms() {
       failed=1
       if [[ "$origin" == L ]]; then
         idx=$((idx + 1))
-        echo "polaris: private denylist term #$idx found (redacted, location only):" >&2
+        echo "sentinel: private denylist term #$idx found (redacted, location only):" >&2
         # path:line only -- strip the matched content; mask any private term in the path.
         while IFS= read -r line; do
-          printf '   %s\n' "$(_polaris_mask "$line")" >&2
+          printf '   %s\n' "$(_sentinel_mask "$line")" >&2
         done < <(printf '%s\n' "$grep_out" | sed 's/:\([0-9][0-9]*\):.*/:\1/')
       else
-        echo "polaris: forbidden term '$(_polaris_mask "$term")':" >&2
+        echo "sentinel: forbidden term '$(_sentinel_mask "$term")':" >&2
         while IFS= read -r line; do
-          printf '   %s\n' "$(_polaris_mask "$line")" >&2
+          printf '   %s\n' "$(_sentinel_mask "$line")" >&2
         done <<< "$grep_out"
       fi
     fi
     if [[ $rc -ge 2 ]]; then
-      echo "polaris: WARNING: a path could not be fully scanned (grep rc=$rc); failing closed." >&2
+      echo "sentinel: WARNING: a path could not be fully scanned (grep rc=$rc); failing closed." >&2
       failed=1
     fi
-  done < <(polaris_forbidden_terms "$manifest" "$filter")
+  done < <(sentinel_forbidden_terms "$manifest" "$filter")
   return $failed
 }
 
@@ -294,25 +294,25 @@ polaris_scan_terms() {
 # content is clean). Reports the masked path -- a path name minus the term is not
 # itself a secret. Pass repo-relative paths so absolute prefixes (e.g. a home
 # path) do not false-positive. Returns 1 on any hit.
-# polaris_scan_pathnames <manifest> <relpath...>
-polaris_scan_pathnames() {
+# sentinel_scan_pathnames <manifest> <relpath...>
+sentinel_scan_pathnames() {
   local manifest=$1; shift
   [[ $# -gt 0 ]] || return 0
   local local_denylist
-  local_denylist=$(polaris_manifest_value "$manifest" local_denylist)
+  local_denylist=$(sentinel_manifest_value "$manifest" local_denylist)
   [[ -z "$local_denylist" ]] && local_denylist="tools/forbidden-terms.local"
-  _polaris_validate_relpath local_denylist "$local_denylist" || return 1
+  _sentinel_validate_relpath local_denylist "$local_denylist" || return 1
   local paths=("$@")
 
   local lterms=() o t
   while IFS=$'\t' read -r o t; do
     [[ "$o" == L && -n "$t" ]] && lterms+=("$t")
-  done < <(polaris_forbidden_terms "$manifest" L)
+  done < <(sentinel_forbidden_terms "$manifest" L)
   if ((${#lterms[@]} > 1)); then
     local _s; _s=$(printf '%s\n' "${lterms[@]}" | awk '{print length"\t"$0}' | sort -rn | cut -f2-)
     lterms=(); while IFS= read -r t; do [[ -n "$t" ]] && lterms+=("$t"); done <<< "$_s"
   fi
-  _polaris_mask_path() {
+  _sentinel_mask_path() {
     local s=$1 lt
     if ((${#lterms[@]})); then for lt in "${lterms[@]}"; do s=${s//"$lt"/<REDACTED>}; done; fi
     printf '%s' "$s"
@@ -330,27 +330,27 @@ polaris_scan_pathnames() {
         [[ "$p" == *"$term"* ]] || continue
       fi
       failed=1
-      echo "polaris: forbidden term in a tracked path name: $(_polaris_mask_path "$p")" >&2
+      echo "sentinel: forbidden term in a tracked path name: $(_sentinel_mask_path "$p")" >&2
     done
-  done < <(polaris_forbidden_terms "$manifest")
+  done < <(sentinel_forbidden_terms "$manifest")
   return $failed
 }
 
-# Verify the Polaris core against its manifest.
-# polaris_check_core <core_dir> <manifest>
+# Verify the Sentinel core against its manifest.
+# sentinel_check_core <core_dir> <manifest>
 # Emits diagnostics to stderr; returns 0 on success, 1 on any failure.
-polaris_check_core() {
+sentinel_check_core() {
   local core_dir=$1 manifest=$2
   local base manifest_core_dir expected_core_dir actual_core_dir failed=0
   base=$(cd "$(dirname "$manifest")" && pwd)
 
   if [[ ! -f "$manifest" ]]; then
-    echo "polaris: missing manifest: $manifest" >&2
+    echo "sentinel: missing manifest: $manifest" >&2
     return 1
   fi
 
-  polaris_check_manifest_paths "$manifest" || failed=1
-  manifest_core_dir=$(polaris_manifest_core_dir "$manifest" 2>/dev/null || true)
+  sentinel_check_manifest_paths "$manifest" || failed=1
+  manifest_core_dir=$(sentinel_manifest_core_dir "$manifest" 2>/dev/null || true)
   if [[ -n "$manifest_core_dir" ]]; then
     if expected_core_dir=$(cd "$base/$manifest_core_dir" 2>/dev/null && pwd); then
       :
@@ -363,15 +363,15 @@ polaris_check_core() {
       actual_core_dir=""
     fi
     if [[ -n "$expected_core_dir" && -n "$actual_core_dir" && "$expected_core_dir" != "$actual_core_dir" ]]; then
-      echo "polaris: core_dir argument does not match manifest core_dir '$manifest_core_dir'" >&2
+      echo "sentinel: core_dir argument does not match manifest core_dir '$manifest_core_dir'" >&2
       failed=1
     fi
   fi
 
   local name
-  name=$(polaris_manifest_value "$manifest" name)
-  if [[ "$name" != "polaris" ]]; then
-    echo "polaris: manifest must name the core 'polaris' (got '${name:-<none>}')" >&2
+  name=$(sentinel_manifest_value "$manifest" name)
+  if [[ "$name" != "sentinel" ]]; then
+    echo "sentinel: manifest must name the core 'sentinel' (got '${name:-<none>}')" >&2
     failed=1
   fi
 
@@ -379,34 +379,34 @@ polaris_check_core() {
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
     if [[ ! -f "$base/$rel" || -L "$base/$rel" ]]; then
-      echo "polaris: missing required core file: $rel" >&2
+      echo "sentinel: missing required core file: $rel" >&2
       failed=1
     fi
-  done < <(polaris_manifest_array "$manifest" required_core_read_order)
+  done < <(sentinel_manifest_array "$manifest" required_core_read_order)
 
   # Forbidden-term scan over the core directory (generic + local denylist).
-  polaris_scan_terms "$manifest" "$core_dir" || failed=1
+  sentinel_scan_terms "$manifest" "$core_dir" || failed=1
 
   return $failed
 }
 
 # Print the core read-order files with section banners (human-readable dump).
 # Includes the manifest. Used by `tools/render` for inspection.
-# polaris_render_core <core_dir> <manifest>
-polaris_render_core() {
+# sentinel_render_core <core_dir> <manifest>
+sentinel_render_core() {
   local core_dir=$1 manifest=$2
   local base rel
   base=$(cd "$(dirname "$manifest")" && pwd)
-  polaris_check_manifest_paths "$manifest" || return 1
+  sentinel_check_manifest_paths "$manifest" || return 1
   printf '\n\n===== %s =====\n\n' "$(basename "$manifest")"
   cat "$manifest"
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
-    _polaris_validate_relpath core_file "$rel" || return 1
-    [[ -f "$base/$rel" && ! -L "$base/$rel" ]] || { echo "polaris: missing core file: $rel" >&2; return 1; }
+    _sentinel_validate_relpath core_file "$rel" || return 1
+    [[ -f "$base/$rel" && ! -L "$base/$rel" ]] || { echo "sentinel: missing core file: $rel" >&2; return 1; }
     printf '\n\n===== %s =====\n\n' "$rel"
     cat "$base/$rel"
-  done < <(polaris_core_files "$manifest" required)
+  done < <(sentinel_core_files "$manifest" required)
 }
 
 # Print an inlinable, BRAND-NEUTRAL contract: just the required core rule files,
@@ -414,48 +414,48 @@ polaris_render_core() {
 # as a section under the injected document's single title. No manifest dump, no
 # banners, and no source-path comments (those would leak the repo's layout), so
 # the result embeds directly into a tool's auto-loaded entrypoint.
-# polaris_render_bundle <core_dir> <manifest>
-polaris_render_bundle() {
+# sentinel_render_bundle <core_dir> <manifest>
+sentinel_render_bundle() {
   local core_dir=$1 manifest=$2
   local base rel emitted=0
   base=$(cd "$(dirname "$manifest")" && pwd)
-  polaris_check_manifest_paths "$manifest" || return 1
+  sentinel_check_manifest_paths "$manifest" || return 1
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
-    _polaris_validate_relpath core_file "$rel" || return 1
-    [[ -f "$base/$rel" && ! -L "$base/$rel" ]] || { echo "polaris: missing core file: $rel" >&2; return 1; }
+    _sentinel_validate_relpath core_file "$rel" || return 1
+    [[ -f "$base/$rel" && ! -L "$base/$rel" ]] || { echo "sentinel: missing core file: $rel" >&2; return 1; }
     awk '
       /^```/ { fence = !fence }
       { if (!fence && $0 ~ /^#{1,6} /) print "#" $0; else print $0 }
     ' "$base/$rel"
     printf '\n'
     emitted=1
-  done < <(polaris_core_files "$manifest" required)
+  done < <(sentinel_core_files "$manifest" required)
   # Refuse to emit an empty bundle: a malformed/unreadable manifest must FAIL
   # loudly, not silently render to nothing (which would hash to the empty-string
   # sha and make a jq machine disagree with a no-jq one).
   if (( emitted == 0 )); then
-    echo "polaris: empty required_core_read_order (manifest unreadable or empty); refusing empty bundle" >&2
+    echo "sentinel: empty required_core_read_order (manifest unreadable or empty); refusing empty bundle" >&2
     return 1
   fi
 }
 
 # Canonical sha256 of the rendered bundle -- the single source of truth for the
 # version stamp in generated blocks and for drift/status comparisons. Hashes the
-# exact bytes polaris_render_bundle emits. Use this EVERYWHERE the bundle sha is
+# exact bytes sentinel_render_bundle emits. Use this EVERYWHERE the bundle sha is
 # computed so install, status, and verify-vendor always agree.
-# polaris_bundle_sha256 <core_dir> <manifest>
-polaris_bundle_sha256() {
+# sentinel_bundle_sha256 <core_dir> <manifest>
+sentinel_bundle_sha256() {
   local tmp rc
-  tmp=$(mktemp "${TMPDIR:-/tmp}/polaris-bundle.XXXXXX") || return 1
-  if polaris_render_bundle "$1" "$2" > "$tmp"; then
+  tmp=$(mktemp "${TMPDIR:-/tmp}/sentinel-bundle.XXXXXX") || return 1
+  if sentinel_render_bundle "$1" "$2" > "$tmp"; then
     :
   else
     rc=$?
     rm -f "$tmp"
     return "$rc"
   fi
-  polaris_sha256_stdin < "$tmp"
+  sentinel_sha256_stdin < "$tmp"
   rc=$?
   rm -f "$tmp"
   return "$rc"
@@ -463,12 +463,12 @@ polaris_bundle_sha256() {
 
 # Render the managed adapter block (markers + provenance header + inlined
 # contract). This is shared by install/status so they prove the same bytes.
-# polaris_render_managed_block <core_dir> <manifest> <version_file>
-polaris_render_managed_block() {
+# sentinel_render_managed_block <core_dir> <manifest> <version_file>
+sentinel_render_managed_block() {
   local core_dir=$1 manifest=$2 version_file=$3 ver bundle sha
   ver=$(tr -d ' \r\n' < "$version_file" 2>/dev/null || echo dev)
-  bundle=$(polaris_render_bundle "$core_dir" "$manifest") || return 1
-  sha=$(polaris_bundle_sha256 "$core_dir" "$manifest") || return 1
+  bundle=$(sentinel_render_bundle "$core_dir" "$manifest") || return 1
+  sha=$(sentinel_bundle_sha256 "$core_dir" "$manifest") || return 1
   printf '%s\n' "<!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->"
   printf '%s\n' "<!-- version: $ver  sha256: $sha -->"
   printf '\n%s\n\n' "# Operating Contract"
@@ -484,8 +484,8 @@ polaris_render_managed_block() {
 # Compose target content with the block inserted into <out>: replace an existing
 # managed block in place (collapsing duplicates to one), otherwise append it.
 # Nonzero means the target has BEGIN without END and must not be overwritten.
-# polaris_compose_adapter <target> <blockfile> <out>
-polaris_compose_adapter() {
+# sentinel_compose_adapter <target> <blockfile> <out>
+sentinel_compose_adapter() {
   local target=$1 blockfile=$2 out=$3
   if [[ -f "$target" ]] && grep -q '^<!-- AGENT-RULES:BEGIN' "$target"; then
     awk -v bf="$blockfile" '
@@ -509,7 +509,7 @@ polaris_compose_adapter() {
 # Canonical adapter target lists for executable tooling. Documentation may
 # describe these paths, but install/status consume this source so supported
 # targets do not drift between commands.
-polaris_repo_adapter_targets() {
+sentinel_repo_adapter_targets() {
   local target_dir=$1
   printf '%s\n' \
     "$target_dir/AGENTS.md" \
@@ -517,7 +517,7 @@ polaris_repo_adapter_targets() {
     "$target_dir/.github/copilot-instructions.md"
 }
 
-polaris_global_adapter_targets() {
+sentinel_global_adapter_targets() {
   printf '%s\n' \
     "${CODEX_HOME:-$HOME/.codex}/AGENTS.md" \
     "$HOME/.claude/CLAUDE.md" \
@@ -526,8 +526,8 @@ polaris_global_adapter_targets() {
 }
 
 # Recompute sha256 sums for the core files and print "<sum>  <relpath>".
-# polaris_core_sha256 <core_dir>
-polaris_core_sha256() {
+# sentinel_core_sha256 <core_dir>
+sentinel_core_sha256() {
   local core_dir=$1 f rel
   local hasher=""
   if command -v sha256sum >/dev/null 2>&1; then
@@ -535,7 +535,7 @@ polaris_core_sha256() {
   elif command -v shasum >/dev/null 2>&1; then
     hasher="shasum -a 256"
   else
-    echo "polaris: no sha256 tool (sha256sum or shasum) available" >&2
+    echo "sentinel: no sha256 tool (sha256sum or shasum) available" >&2
     return 1
   fi
   while IFS= read -r f; do
@@ -545,15 +545,15 @@ polaris_core_sha256() {
 }
 
 # Hash arbitrary content read from stdin; prints the bare sha256 hex digest.
-# polaris_sha256_stdin
-polaris_sha256_stdin() {
+# sentinel_sha256_stdin
+sentinel_sha256_stdin() {
   local out digest
   if command -v sha256sum >/dev/null 2>&1; then
     out=$(sha256sum) || return 1
   elif command -v shasum >/dev/null 2>&1; then
     out=$(shasum -a 256) || return 1
   else
-    echo "polaris: no sha256 tool (sha256sum or shasum) available" >&2
+    echo "sentinel: no sha256 tool (sha256sum or shasum) available" >&2
     return 1
   fi
   digest=${out%%[[:space:]]*}

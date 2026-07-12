@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ShellCheck gate for the shell tooling. Single source so the Makefile, the local
 # `tools/ci` gate, and the GitHub `lint` job all run the SAME command. Uses
-# --source-path=SCRIPTDIR so `source "$SCRIPT_DIR/polaris-lib.sh"` resolves and
+# --source-path=SCRIPTDIR so `source "$SCRIPT_DIR/sentinel-lib.sh"` resolves and
 # the sourced library is followed (no spurious SC1091). Blocking, not advisory:
 # a shell-correctness finding fails the gate.
 set -euo pipefail
@@ -10,7 +10,7 @@ REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO_ROOT"
 
 exec shellcheck -x --source-path=SCRIPTDIR \
-  tools/polaris-lib.sh tools/check tools/install tools/ci tools/lint tools/lint-shell \
+  tools/sentinel-lib.sh tools/check tools/install tools/ci tools/lint tools/lint-shell \
   tools/render tools/status tools/install-hooks tools/verify-vendor tools/release-check \
   tools/ruleset-check \
   scripts/apply-repo-safeguards.sh tests/run.sh

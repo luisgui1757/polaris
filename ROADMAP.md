@@ -1,11 +1,11 @@
-# Polaris Roadmap
+# Sentinel Roadmap
 
 Durable, plaintext roadmap - diffable, grep-able, GitHub-native. Delete at
 maturity.
 
 ## Review snapshot - 2026-06-18
 
-Scope: all-repo adversarial review of Polaris as a generic baseline rule system
+Scope: all-repo adversarial review of Sentinel as a generic baseline rule system
 for Claude Code, Codex, GitHub Copilot, opencode/OpenCode, and Pi CLI. This was
 a planning/review round only: no implementation code changed.
 
@@ -20,7 +20,7 @@ Evidence gathered:
 - Current repo adapters are drift-free: `tools/install --check` reports
   `AGENTS.md`, `CLAUDE.md`, and `.github/copilot-instructions.md` as `ok`.
 - `tools/status` currently reports repo adapters as `current`; global installs
-  on this machine are not Polaris-managed (`no-block` for Codex/Claude, absent
+  on this machine are not Sentinel-managed (`no-block` for Codex/Claude, absent
   for opencode/Pi).
 - Current external docs checked for volatile tool-ingestion assumptions:
   - Codex docs: https://developers.openai.com/codex/guides/agents-md
@@ -54,8 +54,8 @@ ingestion probes.
 ## CI repair snapshot - 2026-06-19
 
 PR #1 initially failed GitHub CI on `test (ubuntu-latest)` because Ubuntu's
-ShellCheck flagged `SC2015` in `tools/polaris-lib.sh` for the
-`cd ... && pwd || true` idiom inside `polaris_check_core`. The fix rewrites that
+ShellCheck flagged `SC2015` in `tools/sentinel-lib.sh` for the
+`cd ... && pwd || true` idiom inside `sentinel_check_core`. The fix rewrites that
 path resolution as explicit `if` branches and adds a focused regression proving
 that a supplied core directory must still match the manifest `core_dir`.
 
@@ -66,7 +66,7 @@ Status output now formats home-relative paths explicitly.
 Verification after the repair:
 
 - `bash tools/lint-shell` passed.
-- `bats --filter 'manifest paths' tests/polaris.bats` passed: 3/3.
+- `bats --filter 'manifest paths' tests/sentinel.bats` passed: 3/3.
 - `make ci` passed as local preflight.
 - `make gate` passed with the strict toolchain available on `PATH`: strict
   preflight with schema validation, 49/49 bats tests, and PowerShell adapter
@@ -118,8 +118,8 @@ Acceptance criteria:
 
 - A fresh target repo installed with only `tools/install --target <repo>` gives
   an agent enough information to perform a REVIEW without reading any missing
-  Polaris file.
-- Tests fail if required bundle text mentions a Polaris file that is neither
+  Sentinel file.
+- Tests fail if required bundle text mentions a Sentinel file that is neither
   inlined nor installed.
 
 ### Harden release provenance
@@ -129,7 +129,7 @@ index/worktree with no untracked files, rejects existing local/checkable remote
 tags, verifies the exact current `bundle-sha256` in the matching changelog
 section by exact bracketed `x.y.z` heading outside fenced blocks, rejects
 duplicate release sections or bundle-hash tokens, fails closed when `origin` tag
-state cannot be checked, prints the certified commit, and `polaris_bundle_sha256`
+state cannot be checked, prints the certified commit, and `sentinel_bundle_sha256`
 fails closed without relying on caller `pipefail`.
 
 Resolved gap: `make release-check` previously could certify a release without
@@ -148,8 +148,8 @@ Historical evidence:
 - `tools/release-check` printed "safe to tag" without checking staged changes,
   unstaged changes, untracked files, existing `v$VERSION` tags, or the exact
   commit being certified.
-- Verified locally: `polaris_render_bundle core /dev/null` exits 1, but
-  `polaris_bundle_sha256 core /dev/null` emitted the empty SHA and exited 0 in a
+- Verified locally: `sentinel_render_bundle core /dev/null` exits 1, but
+  `sentinel_bundle_sha256 core /dev/null` emitted the empty SHA and exited 0 in a
   plain shell before the fix.
 - Audit reproduction: the old changelog heading regex could match
   `VERSION=1.2.3` against `## [11.2.3]`.
@@ -167,7 +167,7 @@ Implemented solution:
   non-ignored untracked files exist.
 - Print the exact commit SHA being certified and fail if `v$VERSION` already
   exists locally or remotely, or if remote tag state cannot be checked.
-- Make `polaris_bundle_sha256` fail closed internally, independent of caller
+- Make `sentinel_bundle_sha256` fail closed internally, independent of caller
   shell options.
 
 Acceptance criteria:
@@ -264,7 +264,7 @@ Evidence:
 
 - `MANIFEST.json` declares `core_dir`.
 - `tools/install` and `tools/verify-vendor` hard-code `core`.
-- `polaris_check_core` checks required files but not every optional file listed
+- `sentinel_check_core` checks required files but not every optional file listed
   in `optional_core_files`.
 - The JSON schema accepts arbitrary strings for required/optional core paths.
 
@@ -324,12 +324,12 @@ not contain adapter target metadata.
 Evidence:
 
 - Adapter paths are duplicated in `docs/tool-ingestion.md`, `tools/install`,
-  `tools/status`, and `tests/polaris.bats`.
+  `tools/status`, and `tests/sentinel.bats`.
 - Current Codex docs now include `AGENTS.override.md` precedence and explicit
   global confirmation commands, which are not represented in the repo's
   machine-readable metadata.
 - Current Copilot docs support `.github/copilot-instructions.md` and also
-  `AGENTS.md` agent instructions; Polaris currently writes the former and the
+  `AGENTS.md` agent instructions; Sentinel currently writes the former and the
   root `AGENTS.md`, but the support model is not recorded as data.
 - Current OpenCode docs confirm `AGENTS.md`, global
   `~/.config/opencode/AGENTS.md`, Claude fallback behavior, and an
@@ -407,7 +407,7 @@ Proposed solution:
 - Either make the hook run the same practical required surface where available,
   or rename/document `tools/ci` as a local preflight.
 - Add a separate `make gate` for the strongest local equivalent of required CI:
-  `POLARIS_STRICT=1 make ci`, `POLARIS_STRICT=1 make test`, and Windows parity
+  `SENTINEL_STRICT=1 make ci`, `SENTINEL_STRICT=1 make test`, and Windows parity
   where `pwsh` is available.
 
 Acceptance criteria:
@@ -531,7 +531,7 @@ Proposed solution:
 
 Acceptance criteria:
 
-- A new repo can adopt Polaris and prove installation/vendor integrity without
+- A new repo can adopt Sentinel and prove installation/vendor integrity without
   interpreting scattered docs.
 
 ## Design decisions and rejected findings
@@ -554,7 +554,7 @@ parser; enforced budget; determinism. **Public launch:** free Actions with `ci`
 green on Linux + macOS, fork-PR approval = all external contributors, private
 vulnerability reporting enabled. **Windows install path** (`tools/install.ps1`,
 byte-identical to bash, gated by a `windows-latest` CI job). **Gold-standard
-hardening:** strict no-silent-skip gates (`POLARIS_STRICT`), rule clauses that
+hardening:** strict no-silent-skip gates (`SENTINEL_STRICT`), rule clauses that
 name the roads to a fake-green (no test-tampering / error-swallowing / checker-
 silencing / stub-shipping; blast-radius-bound "calibrate to stakes"). Full
 detail in `CHANGELOG.md`.

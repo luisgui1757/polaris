@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Polaris installer.
+# Sentinel installer.
 #
-# Renders the Polaris core into a single inlined "managed block" and writes that
+# Renders the Sentinel core into a single inlined "managed block" and writes that
 # block into the entrypoint files that AI CLIs auto-load at startup -- so the
 # rules are injected with NO tool call and NO slash command. Pointers are not
 # used: 4 of the 5 supported tools have no @import syntax, and inlining is the
@@ -30,7 +30,7 @@
 #   tools/install --target DIR    write/update ANOTHER repo's entrypoints
 #   tools/install --global        write/update global (per-user) entrypoints
 #   tools/install --check         verify the blocks are up to date (CI gate)
-#   tools/install --remove        remove Polaris blocks (uninstall; keeps your text)
+#   tools/install --remove        remove Sentinel blocks (uninstall; keeps your text)
 #   tools/install --dry-run       preview without writing
 #   (--target/--global/--check/--remove/--dry-run compose)
 set -euo pipefail
@@ -38,11 +38,11 @@ export LC_ALL=C
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
-# shellcheck source=polaris-lib.sh
-source "$SCRIPT_DIR/polaris-lib.sh"
+# shellcheck source=sentinel-lib.sh
+source "$SCRIPT_DIR/sentinel-lib.sh"
 
 MANIFEST="$REPO_ROOT/MANIFEST.json"
-CORE="$REPO_ROOT/$(polaris_manifest_core_dir "$MANIFEST")"
+CORE="$REPO_ROOT/$(sentinel_manifest_core_dir "$MANIFEST")"
 
 SCOPE="repo"
 ACTION="write"
@@ -85,14 +85,14 @@ remove_block() {
 
 targets() {
   if [[ "$SCOPE" == repo ]]; then
-    polaris_repo_adapter_targets "$TARGET_DIR"
+    sentinel_repo_adapter_targets "$TARGET_DIR"
   else
-    polaris_global_adapter_targets
+    sentinel_global_adapter_targets
   fi
 }
 
 blockfile=$(mktemp)
-polaris_render_managed_block "$CORE" "$MANIFEST" "$REPO_ROOT/VERSION" > "$blockfile"
+sentinel_render_managed_block "$CORE" "$MANIFEST" "$REPO_ROOT/VERSION" > "$blockfile"
 trap 'rm -f "$blockfile"' EXIT
 
 status=0
@@ -102,7 +102,7 @@ while IFS= read -r t; do
     check)
       if [[ -f "$t" ]] && grep -q '^<!-- AGENT-RULES:BEGIN' "$t"; then
         out=$(mktemp)
-        if polaris_compose_adapter "$t" "$blockfile" "$out"; then
+        if sentinel_compose_adapter "$t" "$blockfile" "$out"; then
           if cmp -s "$t" "$out"; then echo "ok:      $t"; else echo "DRIFT:   $t"; status=1; fi
         else
           echo "MALFORMED: $t (AGENT-RULES:BEGIN without AGENT-RULES:END)"; status=1
@@ -118,12 +118,12 @@ while IFS= read -r t; do
       ;;
     remove)
       if [[ -f "$t" ]] && grep -q '^<!-- AGENT-RULES:BEGIN' "$t"; then
-        out=$(mktemp "$(dirname "$t")/.polaris.XXXXXX" 2>/dev/null || mktemp)
+        out=$(mktemp "$(dirname "$t")/.sentinel.XXXXXX" 2>/dev/null || mktemp)
         if remove_block "$t" "$out"; then
           if grep -q '[^[:space:]]' "$out"; then
             mv "$out" "$t"; echo "removed block: $t (kept surrounding content)"; changed=1
           else
-            rm -f "$out" "$t"; echo "removed file:  $t (was Polaris-only)"; changed=1
+            rm -f "$out" "$t"; echo "removed file:  $t (was Sentinel-only)"; changed=1
           fi
         else
           rm -f "$out"
@@ -136,7 +136,7 @@ while IFS= read -r t; do
       ;;
     dry)
       out=$(mktemp)
-      if polaris_compose_adapter "$t" "$blockfile" "$out"; then
+      if sentinel_compose_adapter "$t" "$blockfile" "$out"; then
         if [[ ! -f "$t" ]] || ! cmp -s "$t" "$out"; then echo "would write: $t"; else echo "unchanged:   $t"; fi
       else
         echo "would REFUSE: $t (AGENT-RULES:BEGIN without AGENT-RULES:END -- fix markers)"; status=1
@@ -146,10 +146,10 @@ while IFS= read -r t; do
     write)
       mkdir -p "$(dirname "$t")"
       # Temp in the target's dir so the final mv is atomic (no torn file on crash).
-      if ! out=$(mktemp "$(dirname "$t")/.polaris.XXXXXX"); then
+      if ! out=$(mktemp "$(dirname "$t")/.sentinel.XXXXXX"); then
         echo "install: cannot create temp file in $(dirname "$t")" >&2; status=1; continue
       fi
-      if polaris_compose_adapter "$t" "$blockfile" "$out"; then
+      if sentinel_compose_adapter "$t" "$blockfile" "$out"; then
         if [[ -f "$t" ]] && cmp -s "$t" "$out"; then
           echo "unchanged: $t"; rm -f "$out"
         else
@@ -169,7 +169,7 @@ if [[ "$SCOPE" == global ]]; then
   echo
   if [[ -f "${CODEX_HOME:-$HOME/.codex}/AGENTS.override.md" ]]; then
     echo "warning: Codex will load ${CODEX_HOME:-$HOME/.codex}/AGENTS.override.md"
-    echo "         before ${CODEX_HOME:-$HOME/.codex}/AGENTS.md; Polaris is installed"
+    echo "         before ${CODEX_HOME:-$HOME/.codex}/AGENTS.md; Sentinel is installed"
     echo "         but may be shadowed for Codex until the override is reconciled."
     echo
   fi
@@ -180,13 +180,13 @@ fi
 
 case "$ACTION" in
   check)
-    if [[ "$status" -eq 0 ]]; then echo "polaris install: blocks up to date."; else echo "polaris install: out of date (drift or missing); run tools/install." >&2; fi
+    if [[ "$status" -eq 0 ]]; then echo "sentinel install: blocks up to date."; else echo "sentinel install: out of date (drift or missing); run tools/install." >&2; fi
     ;;
   write)
-    if [[ "$changed" -eq 1 ]]; then echo "polaris install: done ($SCOPE)."; else echo "polaris install: already up to date ($SCOPE)."; fi
+    if [[ "$changed" -eq 1 ]]; then echo "sentinel install: done ($SCOPE)."; else echo "sentinel install: already up to date ($SCOPE)."; fi
     ;;
   remove)
-    if [[ "$changed" -eq 1 ]]; then echo "polaris install: removed ($SCOPE)."; else echo "polaris install: nothing to remove ($SCOPE)."; fi
+    if [[ "$changed" -eq 1 ]]; then echo "sentinel install: removed ($SCOPE)."; else echo "sentinel install: nothing to remove ($SCOPE)."; fi
     ;;
 esac
 exit "$status"

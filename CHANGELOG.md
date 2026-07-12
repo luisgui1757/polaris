@@ -1,9 +1,16 @@
 # Changelog
 
-All notable changes to Polaris. Format follows [Keep a Changelog]; the project
+All notable changes to Sentinel. Format follows [Keep a Changelog]; the project
 uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
+
+### Changed
+
+- Renamed the project and its complete public/tooling namespace from Sentinel's
+  former name to `sentinel`, including manifest identity, shell helpers,
+  environment flags, temporary-file prefixes, tests, documentation, schemas,
+  workflows, and generated adapters.
 
 ## [0.1.2] - 2026-07-01
 
@@ -23,7 +30,7 @@ tools/verify-vendor <vendored-dir> 0b79f9d33727d0d53edc0d3f88f4f46fc18802b7845f7
   edits, generator runs, and generated-output verification instead.
 - Git workflow rules now require agents to follow repository attribution and
   provenance policy instead of inventing commit trailers.
-- Polaris contributor guidance now allows configured agent author/committer
+- Sentinel contributor guidance now allows configured agent author/committer
   identity while forbidding unsolicited `Co-authored-by`-style boilerplate
   trailers.
 - Bug-fix testing rules now require the highest-fidelity practical reproduction
@@ -97,7 +104,7 @@ tools/verify-vendor <vendored-dir> 19c74a2a3c056c8895f2ecb1dd112ffd6a396f3371210
   warning, after wrapping the workflow lines that previously warned.
 
 ### Fixed
-- Rewrote `polaris_check_core` path resolution to avoid the `A && B || C` shell
+- Rewrote `sentinel_check_core` path resolution to avoid the `A && B || C` shell
   idiom that older CI ShellCheck versions flag, while preserving the manifest
   `core_dir` mismatch check.
 - Made `tools/status` home-relative path display deterministic across Bash
@@ -142,7 +149,7 @@ tools/verify-vendor <vendored-dir> 4b85911c73f793da9b812ba6c83eb07933b267a155c1c
   stable `ci` gate.
 - CI `lint` job (required via the `ci` gate): **gitleaks** secret-shape scan,
   **yamllint**, and **editorconfig-checker**, with configs that pass the tree.
-- `consumers.md` records Polaris's own dogfood install.
+- `consumers.md` records Sentinel's own dogfood install.
 - House repo config: branch-protection rulesets, `settings.yml`, CODEOWNERS, PR
   template, `.editorconfig`/`.gitattributes`, `scripts/apply-repo-safeguards.sh`.
 - Docs: `docs/THREAT_MODEL.md`, `docs/tool-ingestion.md`, `CONTRIBUTING.md`,
@@ -154,7 +161,7 @@ tools/verify-vendor <vendored-dir> 4b85911c73f793da9b812ba6c83eb07933b267a155c1c
 - Restructured core into single-axis files: `PRINCIPLES`→`INVARIANTS`,
   `PRACTICES`→`EXECUTION`, `MODES` first; moved testing/git out of the old
   PRINCIPLES and de-duplicated repeated maxims to one home each.
-- The injected bundle is now **brand-neutral**: no "Polaris"/repo names or
+- The injected bundle is now **brand-neutral**: no "Sentinel"/repo names or
   source paths in the content; the managed-block marker is `AGENT-RULES`; the
   bundle renders as one document with nested section headings.
 - Repo-scope `tools/install --check` now fails on a missing required adapter.
@@ -174,7 +181,7 @@ tools/verify-vendor <vendored-dir> 4b85911c73f793da9b812ba6c83eb07933b267a155c1c
   proven on amd64 (the real Windows target) by the `windows-latest` job and the
   strict-required bash/pwsh parity test on the amd64 Linux runner.
 - Gates are now strict, never silently skipped (gold-standard "a check you did
-  not run is not evidence"): `POLARIS_STRICT=1` (set by CI and `release-check`)
+  not run is not evidence"): `SENTINEL_STRICT=1` (set by CI and `release-check`)
   makes a missing linter or missing `bats` a FAILURE instead of a skip; locally a
   skip is loud and the summary names what was skipped. ShellCheck is now
   **blocking**, runs from one source (`tools/lint-shell`,

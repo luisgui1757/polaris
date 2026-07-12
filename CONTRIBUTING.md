@@ -1,6 +1,6 @@
-# Contributing to Polaris
+# Contributing to Sentinel
 
-Polaris is small on purpose. A rule here is injected into the context of every AI
+Sentinel is small on purpose. A rule here is injected into the context of every AI
 session in every repo that installs it — so each rule competes for scarce model
 attention and tokens. The bar for adding or changing one is therefore high.
 
@@ -10,7 +10,7 @@ A rule may live in `core/` only if it is ALL of:
 
 1. **Generic.** It applies to essentially any software project. No language,
    framework, library, tool, or domain specifics — those belong in a consumer's
-   own overlay, never in Polaris.
+   own overlay, never in Sentinel.
 2. **First-principles.** It states a durable engineering principle, not a passing
    fashion or a personal stylistic preference.
 3. **Actionable and verifiable.** An agent can tell whether it followed the rule.

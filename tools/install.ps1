@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 #Requires -Version 5.1
 <#
-Polaris installer -- Windows / PowerShell port of tools/install.
+Sentinel installer -- Windows / PowerShell port of tools/install.
 
-Renders the Polaris core into a single inlined "managed block" and writes it into
+Renders the Sentinel core into a single inlined "managed block" and writes it into
 the entrypoint files AI CLIs auto-load at startup. It is a faithful port of the
 bash installer and produces BYTE-IDENTICAL output (same bundle sha256, LF line
 endings), so a repo can be installed/checked from either Windows or POSIX and the
@@ -21,7 +21,7 @@ Usage:
   pwsh tools/install.ps1 -Target DIR     write/update ANOTHER repo's entrypoints
   pwsh tools/install.ps1 -Global         write/update global (per-user) entrypoints
   pwsh tools/install.ps1 -Check          verify the blocks are up to date (CI gate)
-  pwsh tools/install.ps1 -Remove         remove Polaris blocks (keeps your text)
+  pwsh tools/install.ps1 -Remove         remove Sentinel blocks (keeps your text)
   pwsh tools/install.ps1 -DryRun         preview without writing
 #>
 [CmdletBinding()]
@@ -73,7 +73,7 @@ function Write-TextLF([string]$path, [string]$content) {
 function Write-TextLFAtomic([string]$path, [string]$content) {
   $dir = Split-Path -Parent $path
   if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-  $tmp = Join-Path $dir ('.polaris.' + [Guid]::NewGuid().ToString('N'))
+  $tmp = Join-Path $dir ('.sentinel.' + [Guid]::NewGuid().ToString('N'))
   try {
     Write-TextLF $tmp $content
     if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -109,7 +109,7 @@ function Get-Sha256Hex([string]$content) {
   return (($hash | ForEach-Object { $_.ToString('x2') }) -join '')
 }
 
-# Faithful port of polaris_render_bundle: for each required core file, demote
+# Faithful port of sentinel_render_bundle: for each required core file, demote
 # every heading one level (outside ``` fences) and concatenate, each file
 # followed by one blank line. LF throughout. Refuses to emit an empty bundle.
 function Get-RenderedBundle {
@@ -120,7 +120,7 @@ function Get-RenderedBundle {
   foreach ($rel in $order) {
     if ([string]::IsNullOrEmpty($rel)) { continue }
     $p = Join-Path $RepoRoot $rel
-    if (-not (Test-Path -LiteralPath $p)) { throw "polaris: missing core file: $rel" }
+    if (-not (Test-Path -LiteralPath $p)) { throw "sentinel: missing core file: $rel" }
     $raw = Read-TextRaw $p
     if ($raw.Length -eq 0) {
       # awk emits ZERO records for an empty file -- only the separator follows.
@@ -142,7 +142,7 @@ function Get-RenderedBundle {
     $emitted = 1
   }
   if ($emitted -eq 0) {
-    throw "polaris: empty required_core_read_order (manifest unreadable or empty); refusing empty bundle"
+    throw "sentinel: empty required_core_read_order (manifest unreadable or empty); refusing empty bundle"
   }
   return $out.ToString()
 }
@@ -303,7 +303,7 @@ foreach ($t in (Get-Targets $scope $targetDir)) {
         try {
           $out = Get-RemovedContent $t
           if ($out -match '[^\s]') { Write-TextLFAtomic $t $out; Write-Output "removed block: $t (kept surrounding content)"; $changed = 1 }
-          else { Remove-Item -LiteralPath $t; Write-Output "removed file:  $t (was Polaris-only)"; $changed = 1 }
+          else { Remove-Item -LiteralPath $t; Write-Output "removed file:  $t (was Sentinel-only)"; $changed = 1 }
         } catch {
           [Console]::Error.WriteLine("install: $t has AGENT-RULES:BEGIN without AGENT-RULES:END; refusing to edit."); $status = 1
         }
@@ -341,9 +341,9 @@ if ($scope -eq 'global') {
 }
 
 switch ($action) {
-  'check'  { if ($status -eq 0) { Write-Output 'polaris install: blocks up to date.' } else { Write-Output 'polaris install: out of date (drift or missing); run tools/install.ps1.' } }
-  'write'  { if ($changed -eq 1) { Write-Output "polaris install: done ($scope)." } else { Write-Output "polaris install: already up to date ($scope)." } }
-  'remove' { if ($changed -eq 1) { Write-Output "polaris install: removed ($scope)." } else { Write-Output "polaris install: nothing to remove ($scope)." } }
+  'check'  { if ($status -eq 0) { Write-Output 'sentinel install: blocks up to date.' } else { Write-Output 'sentinel install: out of date (drift or missing); run tools/install.ps1.' } }
+  'write'  { if ($changed -eq 1) { Write-Output "sentinel install: done ($scope)." } else { Write-Output "sentinel install: already up to date ($scope)." } }
+  'remove' { if ($changed -eq 1) { Write-Output "sentinel install: removed ($scope)." } else { Write-Output "sentinel install: nothing to remove ($scope)." } }
 }
 
 exit $status
