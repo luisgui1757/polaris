@@ -61,6 +61,14 @@ model for an author exfiltrating their own secrets. Failure modes:
   still reported as stale. `tools/verify-vendor` recomputes the vendored bundle
   hash and requires the pinned expected hash by default, so a consumer can prove
   a vendored tree matches the released rules.
+- **Executable-input provenance.** Repository policy permits only selected
+  GitHub-owned Actions and requires every workflow dependency to use a full
+  commit SHA. Python CI tools install from a generated, hash-required lock of
+  the complete transitive graph; downloaded native tools use pinned versions
+  and verified checksums before execution. `tools/repository-policy-check`
+  makes mutable or out-of-policy inputs gate failures.
+- **Immutable publication.** GitHub immutable releases prevent a published tag
+  or asset from being silently replaced after consumer verification.
 
 ## What is NOT protected (residual risk — read this)
 

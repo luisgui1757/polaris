@@ -3,7 +3,7 @@
 > `README.md` and `MANIFEST.json`; change the rules in `core/`, then re-run `tools/install`.
 
 <!-- AGENT-RULES:BEGIN do-not-edit-inside-this-block -->
-<!-- version: 0.1.2  sha256: 0b79f9d33727d0d53edc0d3f88f4f46fc18802b7845f7ba4f9a6cb764d83437e -->
+<!-- version: 0.1.2  sha256: 42a66b438493f7a58711936e73e5d216cd97f340874c28df3e03f169fb3aff7c -->
 
 # Operating Contract
 
@@ -139,6 +139,11 @@ Durable engineering truths. These hold regardless of task, language, or phase.
 - Treat secrets and private data as toxic: never commit, log, print, or echo
   them. Avoid hardcoded user-specific paths, names, or data patterns; model them
   as configuration.
+- Treat executable third-party inputs as supply-chain boundaries: pin immutable
+  identities and verify downloaded bytes before execution.
+- For multi-step durable or external mutations, validate preconditions and
+  concurrent state immediately before writing, then commit atomically or retain
+  a tested recovery path and verify the resulting state by readback.
 - Add an abstraction only when it removes real, present duplication or matches
   an established local pattern.
 - Weight caution by blast radius and reversibility: a local, easily reverted
@@ -236,6 +241,8 @@ than restating them.
 - Identify the source of truth for the behavior you are changing.
 - Inspect nearby code and documentation before choosing an implementation
   pattern.
+- Before non-trivial work, capture the relevant baseline so verification can
+  distinguish regressions from pre-existing failures.
 
 ### During Editing
 
@@ -261,6 +268,9 @@ than restating them.
 
 - Run the repository's relevant focused checks after a narrow change; run the
   full gate when the repository requires it for non-trivial work.
+- Tie verification evidence to the exact commit and produced artifact that will
+  ship; results from another revision or a source tree alone are not proof of
+  the delivered state.
 - A check you did not run is not evidence. Report which checks ran and which were
   intentionally skipped.
 
@@ -300,6 +310,9 @@ The single source for test rules.
   and tolerance-appropriate values.
 - For persistence, test old shapes and missing new fields.
 - For generated artifacts, test both the source metadata and the rendered output.
+- For packaged or installed deliverables, test the produced artifact through
+  the same consumer entrypoint users invoke; source-tree tests alone are not
+  sufficient evidence.
 - If a bug pattern appears in one place, search for other instances before
   closing it.
 

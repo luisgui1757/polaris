@@ -5,12 +5,48 @@ uses [Semantic Versioning]. Consumers pin a version and a `bundle-sha256`.
 
 ## [Unreleased]
 
+### Added
+
+- Five first-principles clauses now cover executable supply-chain boundaries,
+  recoverable external mutations, baseline capture, exact-artifact evidence,
+  and consumer-entrypoint testing for packaged deliverables.
+- `tools/repository-policy-check` verifies workflow provenance, SHA pinning,
+  single-source branch policy, and the Renovate/Dependabot ownership split.
+- `docs/GOVERNANCE.md` specifies the live GitHub contract and its exact-main,
+  snapshot, rollback, recovery, and readback procedure.
+
 ### Changed
 
 - Renamed the project and its complete public/tooling namespace from Sentinel's
   former name to `sentinel`, including manifest identity, shell helpers,
   environment flags, temporary-file prefixes, tests, documentation, schemas,
   workflows, and generated adapters.
+- Main-branch integrity is now unbypassable; the owner bypass is PR-only and
+  limited to review and branch-update rules. CodeQL is merge-blocking and
+  classic branch protection no longer overlaps the ruleset source of truth.
+- Repository Actions are restricted to selected GitHub-owned, full-SHA-pinned
+  dependencies. Renovate owns routine version updates, while GitHub-native
+  Dependabot retains vulnerability alerts and security-update ownership.
+- The strict manifest validator is refreshed from `check-jsonschema` 0.29.4 to
+  0.37.4 after the dependency inventory identified the stale pin. Python lint
+  tools and their complete transitive graph now install from a generated,
+  SHA-256-required lock that Renovate maintains.
+- `scripts/apply-repo-safeguards.sh` now requires an exact, clean live `main`,
+  captures a private recovery snapshot, detects concurrent drift, rolls back a
+  failed apply, supports explicit restoration, and verifies all controls by
+  live readback.
+
+### Security
+
+- Future published GitHub releases are immutable, and live policy validation
+  covers Actions permissions, workflow defaults, CodeQL, secret scanning, push
+  protection, Dependabot security updates, and private vulnerability reporting.
+
+### Fixed
+
+- `tools/check` now excludes tracked paths deleted from the working tree before
+  scanning, avoiding a false unreadable-path failure while preserving the
+  fail-closed behavior for files that actually exist.
 
 ## [0.1.2] - 2026-07-01
 

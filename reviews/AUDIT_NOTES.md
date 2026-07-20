@@ -14,10 +14,25 @@ belong in the newcomer-facing `ROADMAP.md`.
   word); enumerate casings explicitly in the denylist when needed.
 - **No-jq manifest fallback** — kept as documented best-effort; jq is preferred
   and CI installs it.
-- **Owner direct-push to main** — the owner is the sole ruleset bypass actor in
-  `always` mode, so the owner can push straight to `main` (no PR) and override
-  `ci`/review; everyone else needs a PR + code-owner review + green `ci`. Kept in
-  public **by design** — it avoids leaking work-in-progress into public PR diffs.
+- **Owner direct-push to main — SUPERSEDED 2026-07-20.** The former design made
+  the owner the sole `always` bypass actor so work could move directly to
+  `main`. The gold-standard governance review rejected that tradeoff: unfinished
+  work stays on a local or private branch, while public `main` keeps
+  unbypassable integrity evidence. See the reconsideration below.
+
+## Reconsidered decisions — 2026-07-20
+
+- **Integrity has no bypass.** Required `ci`, CodeQL, deletion protection, and
+  non-fast-forward protection apply to every actor, including the owner.
+- **Owner discretion is PR-scoped.** The owner remains the sole bypass actor on
+  review and update rules, but only in `pull_request` mode. This preserves the
+  single-maintainer path without permitting an untested direct push.
+- **One branch-policy source.** Classic branch protection was removed from the
+  declared posture because overlapping enforcement creates stale contexts and
+  ambiguous effective policy. The three rulesets are the source of truth.
+- **WIP privacy is not a main-integrity exception.** Sensitive or incomplete
+  work belongs on a local/private branch until it is publication-ready; avoiding
+  a public PR diff does not justify bypassing the exact artifact that ships.
 
 ## Rejected findings (do not re-open)
 

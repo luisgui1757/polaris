@@ -2,13 +2,7 @@
   "name": "Protect main: integrity",
   "target": "branch",
   "enforcement": "active",
-  "bypass_actors": [
-    {
-      "actor_id": 139752288,
-      "actor_type": "User",
-      "bypass_mode": "always"
-    }
-  ],
+  "bypass_actors": [],
   "conditions": {
     "ref_name": {
       "include": ["refs/heads/main"],
@@ -36,6 +30,18 @@
           {
             "context": "ci",
             "integration_id": 15368
+          }
+        ]
+      }
+    },
+    {
+      "type": "code_scanning",
+      "parameters": {
+        "code_scanning_tools": [
+          {
+            "tool": "CodeQL",
+            "alerts_threshold": "errors",
+            "security_alerts_threshold": "high_or_higher"
           }
         ]
       }

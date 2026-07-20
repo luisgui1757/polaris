@@ -1,5 +1,7 @@
 # Synced by the Probot Settings app: https://probot.github.io/apps/settings/
-# Alternative one-shot path: scripts/apply-repo-safeguards.sh
+# Live rulesets and GitHub-native controls are applied and verified by
+# scripts/apply-repo-safeguards.sh. Branch policy has one source of truth:
+# .github/rulesets/. Do not add overlapping classic branch protection here.
 
 repository:
   allow_merge_commit: false
@@ -9,28 +11,3 @@ repository:
   delete_branch_on_merge: true
   enable_automated_security_fixes: true
   enable_vulnerability_alerts: true
-
-# This classic protection is the fallback layer. The .github/rulesets/ stack on
-# top of it and carry the owner-only `always` bypass (direct-push); edit the two
-# layers together so they never disagree. scripts/apply-repo-safeguards.sh
-# applies and verifies both.
-branches:
-  - name: main
-    protection:
-      required_status_checks:
-        strict: true
-        contexts:
-          - ci
-      # enforce_admins is false BY DESIGN. The owner is the sole bypass actor
-      # on the .github/rulesets in "always" mode, so the owner can push directly
-      # to main (no PR) and override a failing/missing `ci` check. Everyone else
-      # is fully gated: mandatory PR + code-owner review + required `ci`. This
-      # posture is intentional and is KEPT in public -- do not remove the owner
-      # bypass and do not raise enforce_admins.
-      enforce_admins: false
-      required_pull_request_reviews: null
-      required_linear_history: true
-      required_conversation_resolution: true
-      restrictions: null
-      allow_force_pushes: false
-      allow_deletions: false

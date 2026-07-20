@@ -1,7 +1,7 @@
 # Sentinel task entry point. Thin wrappers over tools/*; mirrors the house
 # Makefile convention so `make ci`, `make test`, `make install-hooks` behave the
 # same as in sibling repos.
-.PHONY: help preflight ci gate check ruleset-check render test lint lint-shell status \
+.PHONY: help preflight ci gate check ruleset-check repository-policy-check render test lint lint-shell status \
   install install-global install-hooks uninstall safeguards release-check
 
 help: ## Show available targets
@@ -17,6 +17,9 @@ check: ## Verify core + privacy leak scan only
 
 ruleset-check: ## Validate local branch-protection ruleset semantics
 	@bash tools/ruleset-check
+
+repository-policy-check: ## Validate repository governance and supply-chain policy
+	@bash tools/repository-policy-check
 
 gate: ## Strongest local gate (strict preflight + regression suite)
 	@if ! command -v pwsh >/dev/null 2>&1; then \

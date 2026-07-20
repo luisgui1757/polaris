@@ -1,0 +1,46 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Single version-update bot. GitHub-native Dependabot remains responsible for vulnerability alerts and security updates.",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":timezone(Europe/Berlin)"
+  ],
+  "enabledManagers": ["github-actions", "custom.regex", "pip-compile"],
+  "schedule": ["before 06:00 on monday"],
+  "prConcurrentLimit": 4,
+  "prHourlyLimit": 2,
+  "labels": ["dependencies"],
+  "automerge": false,
+  "rebaseWhen": "behind-base-branch",
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 04:00 on monday"]
+  },
+  "pip-compile": {
+    "managerFilePatterns": ["/^\\.github/ci-requirements\\.txt$/"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": ["ec_ver=(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "editorconfig-checker/editorconfig-checker",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": ["gl_ver=(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "gitleaks/gitleaks",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ]
+}
