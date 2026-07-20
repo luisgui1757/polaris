@@ -38,6 +38,11 @@ Durable engineering truths. These hold regardless of task, language, or phase.
 - Treat secrets and private data as toxic: never commit, log, print, or echo
   them. Avoid hardcoded user-specific paths, names, or data patterns; model them
   as configuration.
+- Treat executable third-party inputs as supply-chain boundaries: pin immutable
+  identities and verify downloaded bytes before execution.
+- For multi-step durable or external mutations, validate preconditions and
+  concurrent state immediately before writing, then commit atomically or retain
+  a tested recovery path and verify the resulting state by readback.
 - Add an abstraction only when it removes real, present duplication or matches
   an established local pattern.
 - Weight caution by blast radius and reversibility: a local, easily reverted

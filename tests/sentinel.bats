@@ -208,6 +208,17 @@ JSON
   [ "$status" -eq 0 ]
 }
 
+@test "check (end-to-end): ignores a tracked path deleted from the working tree" {
+  repo="$TMP/gitdeleted"; mkdir -p "$repo"
+  cp -R "$ROOT/tools" "$ROOT/core" "$ROOT/MANIFEST.json" "$repo/"
+  printf 'tracked then deleted\n' > "$repo/obsolete.md"
+  ( cd "$repo" && git init -q && git add -A \
+      && git -c user.email=ci@sentinel.test -c user.name=ci commit -qm init >/dev/null 2>&1 )
+  rm "$repo/obsolete.md"
+  run bash "$repo/tools/check"
+  [ "$status" -eq 0 ]
+}
+
 @test "check: reports DRIFT when a managed block body is stale" {
   app="$TMP/appd"; mkdir -p "$app"
   bash "$ROOT/tools/install" --target "$app" >/dev/null
@@ -626,14 +637,37 @@ EOF
   mv "$rules/main-integrity.json.t" "$rules/main-integrity.json"
   run bash "$ROOT/tools/ruleset-check" --ruleset-dir "$rules"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"required status checks require only GitHub Actions ci"* ]]
+  [[ "$output" == *"required status checks require only strict GitHub Actions ci"* ]]
 
   jq 'del(.rules[] | select(.type == "required_status_checks").parameters.required_status_checks[0].integration_id)' \
     "$rules/main-integrity.json" > "$rules/main-integrity.json.t"
   mv "$rules/main-integrity.json.t" "$rules/main-integrity.json"
   run bash "$ROOT/tools/ruleset-check" --ruleset-dir "$rules"
   [ "$status" -ne 0 ]
-  [[ "$output" == *"required status checks require only GitHub Actions ci"* ]]
+  [[ "$output" == *"required status checks require only strict GitHub Actions ci"* ]]
+}
+
+@test "ruleset-check: integrity is unbypassable and CodeQL is merge-blocking" {
+  if ! command -v jq >/dev/null 2>&1; then
+    skip "jq not installed"
+  fi
+  rules="$TMP/rulesets-integrity"; mkdir -p "$rules"
+  cp "$ROOT/.github/rulesets/"*.json "$rules/"
+
+  jq '.bypass_actors = [{"actor_id":1,"actor_type":"User","bypass_mode":"always"}]' \
+    "$rules/main-integrity.json" > "$rules/main-integrity.json.t"
+  mv "$rules/main-integrity.json.t" "$rules/main-integrity.json"
+  run bash "$ROOT/tools/ruleset-check" --ruleset-dir "$rules"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"has no bypass actors"* ]]
+
+  cp "$ROOT/.github/rulesets/main-integrity.json" "$rules/main-integrity.json"
+  jq 'del(.rules[] | select(.type == "code_scanning"))' \
+    "$rules/main-integrity.json" > "$rules/main-integrity.json.t"
+  mv "$rules/main-integrity.json.t" "$rules/main-integrity.json"
+  run bash "$ROOT/tools/ruleset-check" --ruleset-dir "$rules"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"has exactly the expected rule types"* ]]
 }
 
 @test "GitHub ci gate requires the pinned dependency review job" {
@@ -665,7 +699,7 @@ EOF
   fi
   rules="$TMP/rulesets-owner"; mkdir -p "$rules"
   cp "$ROOT/.github/rulesets/"*.json "$rules/"
-  owner="$(jq -r '.bypass_actors[0].actor_id' "$rules/main-integrity.json")"
+  owner="$(jq -r '.bypass_actors[0].actor_id' "$rules/main-review.json")"
   wrong=1
   [ "$owner" = 1 ] && wrong=2
 
@@ -675,6 +709,75 @@ EOF
   run bash "$ROOT/tools/ruleset-check" --ruleset-dir "$rules" --owner-id "$wrong"
   [ "$status" -ne 0 ]
   [[ "$output" == *"bypass actor id matches repository owner"* ]]
+}
+
+@test "ruleset-check: owner bypass is PR-only on review and updates" {
+  if ! command -v jq >/dev/null 2>&1; then
+    skip "jq not installed"
+  fi
+  rules="$TMP/rulesets-owner-mode"; mkdir -p "$rules"
+  cp "$ROOT/.github/rulesets/"*.json "$rules/"
+  jq '.bypass_actors[0].bypass_mode = "always"' \
+    "$rules/main-review.json" > "$rules/main-review.json.t"
+  mv "$rules/main-review.json.t" "$rules/main-review.json"
+  run bash "$ROOT/tools/ruleset-check" --ruleset-dir "$rules"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"has exactly one owner PR-only bypass"* ]]
+}
+
+@test "repository-policy-check: accepts canonical sources and rejects mutable Actions" {
+  run bash "$ROOT/tools/repository-policy-check"
+  [ "$status" -eq 0 ]
+
+  policy="$TMP/repository-policy"
+  mkdir -p "$policy/.github/workflows"
+  cp "$ROOT/.github/settings.yml" "$policy/.github/settings.yml"
+  cp "$ROOT/.github/ci-requirements.in" "$ROOT/.github/ci-requirements.txt" "$policy/.github/"
+  cp "$ROOT/renovate.json" "$policy/renovate.json"
+  cp "$ROOT/.github/workflows/ci.yml" "$policy/.github/workflows/ci.yml"
+  sed 's#actions/checkout@[0-9a-f]*#actions/checkout@main#' \
+    "$policy/.github/workflows/ci.yml" > "$policy/.github/workflows/ci.yml.t"
+  mv "$policy/.github/workflows/ci.yml.t" "$policy/.github/workflows/ci.yml"
+
+  run env SENTINEL_REPO_ROOT="$policy" bash "$ROOT/tools/repository-policy-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"not pinned to a full lowercase commit SHA"* ]]
+}
+
+@test "repository-policy-check: rejects duplicate Dependabot version ownership" {
+  policy="$TMP/repository-policy-dependabot"
+  mkdir -p "$policy/.github/workflows"
+  cp "$ROOT/.github/settings.yml" "$policy/.github/settings.yml"
+  cp "$ROOT/.github/ci-requirements.in" "$ROOT/.github/ci-requirements.txt" "$policy/.github/"
+  cp "$ROOT/renovate.json" "$policy/renovate.json"
+  cp "$ROOT/.github/workflows/ci.yml" "$policy/.github/workflows/ci.yml"
+  printf 'version: 2\nupdates: []\n' > "$policy/.github/dependabot.yml"
+
+  run env SENTINEL_REPO_ROOT="$policy" bash "$ROOT/tools/repository-policy-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"version updates must have one owner"* ]]
+}
+
+@test "repository-policy-check: rejects workflow write permissions" {
+  policy="$TMP/repository-policy-write"
+  mkdir -p "$policy/.github/workflows"
+  cp "$ROOT/.github/settings.yml" "$policy/.github/settings.yml"
+  cp "$ROOT/.github/ci-requirements.in" "$ROOT/.github/ci-requirements.txt" "$policy/.github/"
+  cp "$ROOT/renovate.json" "$policy/renovate.json"
+  cp "$ROOT/.github/workflows/ci.yml" "$policy/.github/workflows/ci.yml"
+  printf '\npermissions:\n  contents: write\n' >> "$policy/.github/workflows/ci.yml"
+
+  run env SENTINEL_REPO_ROOT="$policy" bash "$ROOT/tools/repository-policy-check"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"workflow permissions must not grant write access"* ]]
+}
+
+@test "safeguards: documents preflight, recovery, and PR-only bypass" {
+  run bash "$ROOT/scripts/apply-repo-safeguards.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--preflight-only"* ]]
+  [[ "$output" == *"--restore SNAPSHOT"* ]]
+  [[ "$output" == *"PR-only owner bypass"* ]]
 }
 
 @test "install.ps1 write preserves surrounding text and cleans temp files" {

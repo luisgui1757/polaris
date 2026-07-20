@@ -96,6 +96,44 @@ Verification:
   ShellCheck, 58/58 bats tests, and PowerShell adapter parity.
 - `git diff --check` passed.
 
+## Gold-standard governance snapshot - 2026-07-20
+
+Status: implemented on `chore/gold-standard-governance-20260720`; live GitHub
+cutover is intentionally pending merge and an exact-main apply. Checked-in
+policy must not be described as live until post-merge readback passes.
+
+- Added five first-principles core rules for executable provenance, recoverable
+  external mutations, baseline capture, exact-artifact evidence, and testing
+  packaged output through the consumer entrypoint.
+- Removed every bypass from the integrity ruleset. Owner bypass remains only on
+  review and update rules, in `pull_request` mode.
+- Added merge-blocking CodeQL and removed overlapping classic branch protection.
+- Restricted Actions policy to selected GitHub-owned, full-SHA-pinned workflows
+  and enabled immutable future releases in the live apply contract.
+- Made Renovate the routine version-update owner while retaining GitHub-native
+  Dependabot vulnerability alerts and security updates.
+- Hash-locked the complete Python CI-tool dependency graph and configured
+  Renovate's `pip-compile` manager to regenerate the artifact with updates.
+- Replaced the one-way safeguards writer with exact-main preflight, private
+  recovery snapshot, concurrent-drift detection, automatic rollback, explicit
+  restore, and full live readback.
+- Fixed whole-tree scanning of intentional tracked deletions and added an
+  end-to-end regression; existing unreadable paths still fail closed.
+
+Required closure evidence:
+
+- Local implementation proof passed: `make gate` ran every strict linter,
+  validated the manifest schema, scanned full history with Gitleaks, passed
+  ShellCheck, passed 65/65 bats tests, and proved PowerShell adapter parity.
+- Renovate 43.272.0 strict configuration validation passed; a local extraction
+  dry-run found 8 Actions references, 17 pip-compile dependencies, and 2 native
+  tool pins without manager errors. The generated Python lock was byte-
+  reproducible and its hash-required install plus both consumer binaries and
+  manifest validation passed in an isolated environment.
+- GitHub required checks green on that exact PR head.
+- After merge: safeguards preflight/apply from clean exact `main`, followed by
+  `tools/ruleset-check --repo` and a recorded live-settings readback.
+
 ## Now (owner actions)
 
 - **Run `make install-global` if desired** to carry the rules into every repo on
@@ -104,9 +142,8 @@ Verification:
   Some supported surfaces can only be proven by launching the real tool and
   asking what instructions reached context. Keep that out of CI unless the owner
   accepts the cost/flakiness.
-- **Run live ruleset verification after any GitHub settings apply** with
-  `tools/ruleset-check --repo owner/repo --owner-id <id>` if you want evidence
-  against live GitHub state, not only the checked-in JSON.
+- **Complete the post-merge governance cutover** exactly as documented in
+  `docs/GOVERNANCE.md`; retain the recovery snapshot until live readback passes.
 
 ## Fixed in branch - P1
 
@@ -571,7 +608,7 @@ TESTING -> MEMORY); two-tier privacy with redaction + path/manifest scans, plus
 `release-check`; bats suite + Linux/macOS CI matrix with **gitleaks, yamllint,
 and editorconfig-checker** gated by `ci` (ShellCheck **blocking**) plus
 **check-jsonschema** enforcing the canonical manifest schema; branch-protection
-rulesets (owner-only `always` bypass for direct-push + CI/review override);
+rulesets with unbypassable integrity and PR-only owner review/update bypass;
 threat-model / tool-ingestion / contributing / security / release docs; jq
 parser; enforced budget; determinism. **Public launch:** free Actions with `ci`
 green on Linux + macOS, fork-PR approval = all external contributors, private

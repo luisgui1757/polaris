@@ -56,14 +56,11 @@ jobs:
       - name: Install linters
         run: |
           set -euxo pipefail
-          # Version-pinned (not full --require-hashes). Deliberate: this is a
-          # read-only lint job (permissions: contents: read, no secrets, no write
-          # token), so a tampered wheel can influence only the lint result. A
-          # hash-pinned lock of the full transitive tree would be Python-minor-
-          # version-fragile (it breaks CI on a runner Python bump) and high-
-          # maintenance for ~nil added protection here. The binary downloads
-          # below, which DO execute with broader scope, are checksum-verified.
-          python3 -m pip install --user yamllint==1.38.0 check-jsonschema==0.29.4
+          # The generated lock pins the complete transitive graph and every
+          # accepted artifact digest. Renovate regenerates it from the two
+          # direct pins in ci-requirements.in.
+          python3 -m pip install --user --require-hashes \
+            -r .github/ci-requirements.txt
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           # Each pinned version travels with its asset sha256: download, verify,
           # then extract. A yanked/retagged/tampered upstream asset fails loudly

@@ -44,10 +44,11 @@ bundle.
   actual author/committer. Do not add `Co-authored-by` or similar boilerplate
   attribution trailers unless the maintainer explicitly requests them.
 - External contributions land via PR; `main` is protected for everyone but the
-  owner — squash-only merge, linear history, required `ci` check, mandatory
-  code-owner review (see `.github/rulesets/`). The repo owner holds an
-  intentional `always` bypass to push directly (by design; see `ROADMAP.md`), so
-  not every commit on `main` came through a PR.
+  owner — squash-only merge, linear history, required `ci` and CodeQL checks,
+  and mandatory code-owner review (see `.github/rulesets/`). Integrity has no
+  bypass. The owner may bypass review and branch-update restrictions only while
+  merging a pull request, so every update still carries exact-head CI and
+  CodeQL evidence.
 
 ## Local setup
 

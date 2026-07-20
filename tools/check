@@ -50,6 +50,10 @@ rel_paths=()
 if git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   while IFS= read -r -d '' f; do
     case "$f" in MANIFEST.json | tools/forbidden-terms.local) continue ;; esac
+    # `git ls-files --cached` includes tracked paths deleted in the working
+    # tree. They are not publishable working-tree content and passing them to
+    # grep produces a false unreadable-path failure.
+    [[ -e "$REPO_ROOT/$f" || -L "$REPO_ROOT/$f" ]] || continue
     rel_paths+=("$f")
   done < <(git -C "$REPO_ROOT" ls-files -z --cached --others --exclude-standard)
 else

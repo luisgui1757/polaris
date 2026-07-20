@@ -14,9 +14,12 @@ term. Private vulnerability reporting is enabled on GitHub so the repository's
 preferred channel.
 
 GitHub also runs secret scanning with push protection, CodeQL analysis of the
-Actions workflow, Dependabot security updates, and dependency review. These
-hosted controls complement the repository's full-history Gitleaks scan and
-strict cross-platform `ci` gate; they do not replace either one.
+Actions workflow, Dependabot vulnerability alerts and security updates, and
+dependency review. Renovate owns routine version updates without automerge so
+the two bots do not duplicate responsibility. These hosted controls complement
+the repository's full-history Gitleaks scan and strict cross-platform `ci` gate;
+they do not replace either one. Actions are limited to selected GitHub-owned
+workflows pinned to commit SHAs, and published releases are immutable.
 
 ## Scope
 

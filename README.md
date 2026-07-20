@@ -119,8 +119,8 @@ line) to scan for your terms too. Full guarantee and limits:
 | --- | --- |
 | `MANIFEST.json` | the machine-readable contract: core read-order, term policy, byte budget — **start here** |
 | `core/` | the rules themselves (read in the order `MANIFEST.json` → `required_core_read_order`) |
-| `tools/` | installer (`install`, `install.ps1`) + checks (`check`, `ci`, `lint`, `render`, `ruleset-check`, `status`, `verify-vendor`) |
-| `scripts/` | one-shot repo safeguards (branch protection) |
+| `tools/` | installer (`install`, `install.ps1`) + checks (`check`, `ci`, `lint`, `render`, `repository-policy-check`, `ruleset-check`, `status`, `verify-vendor`) |
+| `scripts/` | transactional GitHub repository safeguards with preflight, recovery snapshot, rollback, and readback |
 | `docs/` | threat model, per-tool ingestion notes, release process |
 | `templates/` | overlay + adapter templates and canonical tool metadata for consumers |
 | `schemas/` | JSON Schema for `MANIFEST.json` |
@@ -136,30 +136,39 @@ the whole rulebook.
 ## Develop
 
 ```bash
-make ci             # local preflight: privacy scan + render + drift + rulesets + lint + shellcheck
+make ci             # local preflight: privacy + drift + repo policy + lint + shellcheck
 make preflight      # same local preflight, named for what it proves
 make gate           # strongest local gate: strict preflight + tests + pwsh drift check
 make test           # bats tooling suite (incl. the bash/pwsh byte-identity parity)
 make install-hooks  # install a git pre-push hook that runs make gate for you
-make safeguards     # apply branch protection + merge rules to the GitHub repo
+make safeguards     # transactionally apply and verify GitHub repository policy
 make help           # list everything
 ```
 
 Local `make ci`/`make preflight` is the fast pre-push surface. It runs the leak
-scan, render smoke, adapter drift, semantic ruleset verification, lint, and
-ShellCheck; outside strict mode, missing optional linters are skipped loudly and
-named in the output. `make gate` is the strongest local proof: it runs the
-preflight in strict mode, the bats suite, and the PowerShell drift check; it
-requires the strict local toolchain, including `pwsh`.
+scan, render smoke, adapter drift, semantic ruleset verification, repository
+policy verification, lint, and ShellCheck; outside strict mode, missing optional
+linters are skipped loudly and named in the output. `make gate` is the strongest
+local proof: it runs the preflight in strict mode, the bats suite, and the
+PowerShell drift check; it requires the strict local toolchain, including
+`pwsh`.
 
 GitHub's required `ci` context is stronger than local preflight: the workflow
 runs Linux + macOS preflight and `make test`, a strict lint job with every
 linter installed, a native **Windows (amd64)** PowerShell installer check, and
-dependency review on pull requests. CodeQL default setup separately scans the
-GitHub Actions source on pull requests, pushes to `main`, and weekly. Dependabot
-checks pinned GitHub Actions weekly, while GitHub secret scanning and push
-protection guard supported credentials. `main` is protected by the rulesets in
-`.github/rulesets/` (squash-only, required `ci` check, linear history).
+dependency review on pull requests. CodeQL default setup scans the GitHub
+Actions source on pull requests, pushes to `main`, and weekly; its errors and
+high-or-higher security alerts are merge-blocking. Renovate is the only general
+version-update bot, while GitHub-native Dependabot remains responsible for
+vulnerability alerts and security updates. Secret scanning and push protection
+guard supported credentials.
+
+`main` has one branch-policy source: `.github/rulesets/`. Integrity has no
+bypass; the owner may bypass review and update restrictions only while merging
+a PR, after strict `ci` and CodeQL pass. Actions are restricted to selected
+GitHub-owned workflows pinned to full commit SHAs, and published releases are
+immutable. The exact live contract and transactional cutover/recovery procedure
+are documented in [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md).
 
 `ROADMAP.md` tracks remaining work and is deleted once the repo matures.
 

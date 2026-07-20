@@ -19,5 +19,8 @@ The single source for test rules.
   and tolerance-appropriate values.
 - For persistence, test old shapes and missing new fields.
 - For generated artifacts, test both the source metadata and the rendered output.
+- For packaged or installed deliverables, test the produced artifact through
+  the same consumer entrypoint users invoke; source-tree tests alone are not
+  sufficient evidence.
 - If a bug pattern appears in one place, search for other instances before
   closing it.

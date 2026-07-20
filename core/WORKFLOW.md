@@ -9,6 +9,8 @@ than restating them.
 - Identify the source of truth for the behavior you are changing.
 - Inspect nearby code and documentation before choosing an implementation
   pattern.
+- Before non-trivial work, capture the relevant baseline so verification can
+  distinguish regressions from pre-existing failures.
 
 ## During Editing
 
@@ -34,6 +36,9 @@ than restating them.
 
 - Run the repository's relevant focused checks after a narrow change; run the
   full gate when the repository requires it for non-trivial work.
+- Tie verification evidence to the exact commit and produced artifact that will
+  ship; results from another revision or a source tree alone are not proof of
+  the delivered state.
 - A check you did not run is not evidence. Report which checks ran and which were
   intentionally skipped.
 

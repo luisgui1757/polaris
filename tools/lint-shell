@@ -12,5 +12,5 @@ cd "$REPO_ROOT"
 exec shellcheck -x --source-path=SCRIPTDIR \
   tools/sentinel-lib.sh tools/check tools/install tools/ci tools/lint tools/lint-shell \
   tools/render tools/status tools/install-hooks tools/verify-vendor tools/release-check \
-  tools/ruleset-check \
+  tools/ruleset-check tools/repository-policy-check \
   scripts/apply-repo-safeguards.sh tests/run.sh
